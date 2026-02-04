@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ControlliPro</title>
+
+    <!-- Meta Tags per PWA -->
+    <meta name="theme-color" content="#ec4899">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ControlliPro">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/Ng66B9jY/medical-report.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Manifest Inline -->
+    <link rel="manifest" id="my-manifest">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdf2f8; /* Sfondo leggermente rosato/clinico */
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+
+        /* Pulsanti e input stile MedicinePro */
+        .type-btn {
+            height: 40px;
+            font-size: 12px;
+            padding: 0 10px;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e5e7eb;
+            background-color: white;
+            color: #64748b;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .type-btn.selected {
+            border-color: transparent;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Varianti colori per tipo misurazione */
+        .type-btn.selected[data-type="pressure"] { background-color: #e11d48; } /* Rosso */
+        .type-btn.selected[data-type="glucose"] { background-color: #9333ea; } /* Viola */
+        .type-btn.selected[data-type="oxygen"] { background-color: #0891b2; } /* Ciano */
+
+        .avatar-btn {
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            opacity: 0.6;
+        }
+
+        .avatar-btn.selected {
+            border-color: #db2777;
+            background-color: #fce7f3;
+            color: #db2777;
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stili specifici Card Misurazione */
+        .measure-card {
+            position: relative;
+            padding-left: 1rem;
+            overflow: hidden;
+        }
+        .measure-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 5px;
+        }
+
+        .border-pressure { border-left: 5px solid #e11d48; }
+        .bg-pressure { background-color: #fff1f2; }
+        
+        .border-glucose { border-left: 5px solid #9333ea; }
+        .bg-glucose { background-color: #faf5ff; }
+
+        .border-oxygen { border-left: 5px solid #0891b2; }
+        .bg-oxygen { background-color: #ecfeff; }
+
+        .xs\:inline { display: none; }
+        @media (min-width: 400px) { .xs\:inline { display: inline; } }
+
+        /* Badge Valori */
+        .val-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 99px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .val-ok { background-color: #dcfce7; color: #166534; }
+        .val-warn { background-color: #ffedd5; color: #9a3412; }
+        .val-alert { background-color: #fee2e2; color: #991b1b; }
+
+    </style>
+</head>
+<body class="text-slate-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER -->
+    <header class="bg-pink-600 text-white p-4 shadow-md z-20 flex justify-between items-center shrink-0 h-16">
+        <div class="flex items-center gap-3">
+            <button id="btn-back" class="hidden text-xl p-1 active:scale-95 transition-transform" aria-label="Indietro">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1 class="text-xl font-bold tracking-wide flex items-center gap-2">
+                <i class="fa-solid fa-heart-pulse"></i> ControlliPro
+            </h1>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="app.showSettings()" class="text-xl p-2 hover:bg-pink-700 rounded-full transition-colors" title="Impostazioni">
+                <i class="fa-solid fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <input type="file" id="import-file" accept=".json" class="hidden" onchange="app.handleImport(this)">
+
+    <!-- MAIN -->
+    <main id="app-container" class="flex-1 overflow-y-auto no-scrollbar relative p-4 max-w-lg mx-auto w-full">
+
+        <!-- VISTA LISTA PROFILI -->
+        <section id="view-profiles" class="fade-in space-y-4">
+            <div class="bg-white p-6 rounded-2xl card-shadow text-center mb-6 border border-pink-100">
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">I tuoi Profili</h2>
+                <p class="text-slate-500 text-sm">Tieni traccia di pressione, glicemia e ossigeno.</p>
+            </div>
+            <div id="profiles-list" class="space-y-3"></div>
+            <button onclick="app.showModal('modal-add-profile')" class="w-full mt-6 bg-pink-600 hover:bg-pink-700 text-white font-semibold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-user-plus"></i> Aggiungi Profilo
+            </button>
+        </section>
+
+        <!-- VISTA DETTAGLIO DATI -->
+        <section id="view-dashboard" class="hidden fade-in pb-24">
+            <div class="flex justify-between items-start mb-4">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                        <h2 id="current-profile-name" class="text-2xl font-bold text-slate-800 truncate max-w-[180px]">Profilo</h2>
+                        <button onclick="app.openEditProfileModal()" class="text-slate-400 hover:text-pink-600 p-1.5 transition-colors">
+                            <i class="fa-solid fa-pencil text-sm"></i>
+                        </button>
+                    </div>
+                    <p id="current-date-display" class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1"></p>
+                </div>
+                <div class="flex flex-col gap-2 items-end">
+                    <button onclick="app.exportProfileTxt()" class="text-pink-600 text-xs px-3 py-1.5 border border-pink-200 rounded-lg hover:bg-pink-50 flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-file-lines"></i> <span class="xs:inline">Report</span>
+                    </button>
+                    <button onclick="app.deleteCurrentProfile()" class="text-red-500 text-xs px-3 py-1.5 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-trash"></i> <span class="xs:inline">Elimina</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Stats Veloci -->
+            <div class="grid grid-cols-3 gap-2 mb-6">
+                <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-rose-500">
+                    <div class="text-rose-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-heart-crack"></i> Press</div>
+                    <div id="stat-pressure" class="text-sm font-bold text-slate-700">-</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-purple-500">
+                    <div class="text-purple-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-droplet"></i> Glic</div>
+                    <div id="stat-glucose" class="text-sm font-bold text-slate-700">-</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-cyan-500">
+                    <div class="text-cyan-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-lungs"></i> Sat</div>
+                    <div id="stat-oxygen" class="text-sm font-bold text-slate-700">-</div>
+                </div>
+            </div>
+
+            <!-- Lista Misurazioni -->
+            <div id="logs-list" class="space-y-4"></div>
+
+            <div id="logs-empty-state" class="hidden flex flex-col items-center justify-center py-12 text-slate-400">
+                <i class="fa-solid fa-clipboard-list text-5xl mb-4 text-slate-200"></i>
+                <p>Nessuna misurazione registrata.</p>
+            </div>
+
+            <button onclick="app.prepareNewEntry()" class="fixed bottom-6 right-6 w-14 h-14 bg-pink-600 text-white rounded-full shadow-xl flex items-center justify-center text-2xl active:scale-90 transition-transform z-30">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </section>
+
+        <!-- VISTA IMPOSTAZIONI -->
+        <section id="view-settings" class="hidden fade-in space-y-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Impostazioni</h2>
+
+            <div class="bg-white p-5 rounded-2xl card-shadow">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-database text-pink-500"></i> Gestione Dati
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="app.triggerImport()" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-file-import text-pink-600 mb-2"></i>
+                        <span class="text-xs font-bold">Importa JSON</span>
+                    </button>
+                    <button onclick="app.exportData()" class="flex flex-col items-center justify-center p-4 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                        <i class="fa-solid fa-download text-green-600 mb-2"></i>
+                        <span class="text-xs font-bold">Esporta Backup</span>
+                    </button>
+                </div>
+                <button onclick="app.resetAllData()" class="w-full mt-4 bg-red-50 text-red-600 py-3 rounded-xl font-bold border border-red-100 hover:bg-red-100 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Resetta tutti i dati
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODALI -->
+    
+    <!-- Modale Profilo -->
+    <div id="modal-add-profile" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 class="text-xl font-bold mb-4">Nuovo Profilo</h3>
+            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Scegli Avatar</p>
+            <div class="grid grid-cols-4 gap-3 mb-4">
+                <button onclick="app.selectAvatar('man')" class="avatar-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="man"><i class="fa-solid fa-person"></i></button>
+                <button onclick="app.selectAvatar('woman')" class="avatar-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="woman"><i class="fa-solid fa-person-dress"></i></button>
+                <button onclick="app.selectAvatar('grandpa')" class="avatar-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="grandpa"><i class="fa-solid fa-person-cane"></i></button>
+                <button onclick="app.selectAvatar('heart')" class="avatar-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="heart"><i class="fa-solid fa-heart"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Nome</p>
+            <input type="text" id="input-profile-name" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none" placeholder="Es. Nonno Giuseppe">
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="app.closeModal('modal-add-profile')" class="px-4 py-2 text-slate-500">Annulla</button>
+                <button onclick="app.createProfile()" class="px-6 py-2 bg-pink-600 text-white rounded-lg font-medium">Crea</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Edit Nome Profilo -->
+    <div id="modal-edit-profile" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 class="text-xl font-bold mb-4">Rinomina Profilo</h3>
+            <input type="text" id="input-edit-profile-name" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none">
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="app.closeModal('modal-edit-profile')" class="px-4 py-2 text-slate-500">Annulla</button>
+                <button onclick="app.saveProfileName()" class="px-6 py-2 bg-pink-600 text-white rounded-lg font-medium">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Nuova Misurazione -->
+    <div id="modal-entry" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4 fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 bg-slate-50">
+                <h3 class="text-lg font-bold text-slate-800 text-center">Nuova Misurazione</h3>
+            </div>
+            
+            <div class="p-5 overflow-y-auto custom-scrollbar space-y-5">
+                
+                <!-- Selezione Tipo -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Cosa vuoi registrare?</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="app.selectEntryType('pressure')" class="type-btn" data-type="pressure">
+                            <i class="fa-solid fa-heart-crack mr-1"></i> Press.
+                        </button>
+                        <button onclick="app.selectEntryType('glucose')" class="type-btn" data-type="glucose">
+                            <i class="fa-solid fa-droplet mr-1"></i> Glicem.
+                        </button>
+                        <button onclick="app.selectEntryType('oxygen')" class="type-btn" data-type="oxygen">
+                            <i class="fa-solid fa-lungs mr-1"></i> Satur.
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data e Ora -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data</label>
+                        <input type="date" id="entry-date" class="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ora</label>
+                        <input type="time" id="entry-time" class="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50">
+                    </div>
+                </div>
+
+                <!-- CAMPI INPUT DINAMICI -->
+                
+                <!-- Pressione -->
+                <div id="fields-pressure" class="hidden space-y-4 animate-fadeIn">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Massima (SYS)</label>
+                            <input type="number" id="input-sys" placeholder="120" class="w-full p-3 border-2 border-slate-100 rounded-xl focus:border-rose-500 outline-none text-2xl font-bold text-center text-rose-600 placeholder-rose-200">
+                        </div>
+                        <div class="text-slate-300 text-2xl">/</div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Minima (DIA)</label>
+                            <input type="number" id="input-dia" placeholder="80" class="w-full p-3 border-2 border-slate-100 rounded-xl focus:border-rose-500 outline-none text-2xl font-bold text-center text-rose-600 placeholder-rose-200">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Battiti (BPM)</label>
+                        <input type="number" id="input-pulse-p" placeholder="70" class="w-full p-3 border border-slate-200 rounded-xl outline-none text-lg text-center">
+                    </div>
+                </div>
+
+                <!-- Glicemia -->
+                <div id="fields-glucose" class="hidden space-y-4 animate-fadeIn">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Valore (mg/dL)</label>
+                        <input type="number" id="input-glucose" placeholder="100" class="w-full p-4 border-2 border-slate-100 rounded-xl focus:border-purple-500 outline-none text-3xl font-bold text-center text-purple-600 placeholder-purple-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Momento</label>
+                        <select id="input-glucose-context" class="w-full p-3 border border-slate-200 rounded-xl bg-white outline-none">
+                            <option value="digiuno">A digiuno (Mattina)</option>
+                            <option value="dopo-pasto">Dopo i pasti (2h)</option>
+                            <option value="casuale">Casuale</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Saturazione -->
+                <div id="fields-oxygen" class="hidden space-y-4 animate-fadeIn">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">SpO2 (%)</label>
+                        <input type="number" id="input-spo2" placeholder="98" max="100" class="w-full p-4 border-2 border-slate-100 rounded-xl focus:border-cyan-500 outline-none text-3xl font-bold text-center text-cyan-600 placeholder-cyan-200">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Battiti (BPM)</label>
+                        <input type="number" id="input-pulse-o" placeholder="70" class="w-full p-3 border border-slate-200 rounded-xl outline-none text-lg text-center">
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Note opzionali</label>
+                    <textarea id="input-notes" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="Es. Dopo camminata, sensazione di vertigini..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+                <button onclick="app.closeModal('modal-entry')" class="px-5 py-2.5 text-slate-500 font-bold hover:bg-slate-200 rounded-xl transition-colors">Chiudi</button>
+                <button onclick="app.saveEntry()" class="px-8 py-2.5 bg-pink-600 text-white rounded-xl font-bold shadow-md hover:bg-pink-700 transition-transform active:scale-95">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            data: { profiles: [] },
+            currentProfileId: null,
+            newProfileAvatar: null,
+            currentEntryType: 'pressure',
+
+            // 🎨 TEMI DI COLORE
+            profileThemes: [
+                { bg: 'bg-pink-50', border: 'border-pink-200', iconBg: 'bg-pink-100', iconText: 'text-pink-600' },
+                { bg: 'bg-indigo-50', border: 'border-indigo-200', iconBg: 'bg-indigo-100', iconText: 'text-indigo-600' },
+                { bg: 'bg-teal-50', border: 'border-teal-200', iconBg: 'bg-teal-100', iconText: 'text-teal-600' },
+                { bg: 'bg-amber-50', border: 'border-amber-200', iconBg: 'bg-amber-100', iconText: 'text-amber-600' },
+            ],
+
+            init() {
+                this.loadData();
+                this.renderProfiles();
+                this.setupManifest();
+                
+                // Set data odierna
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('current-date-display').textContent = new Date().toLocaleDateString('it-IT', options);
+                
+                document.getElementById('btn-back').addEventListener('click', () => this.goBack());
+                
+                // Default date/time in modal
+                const now = new Date();
+                document.getElementById('entry-date').valueAsDate = now;
+                document.getElementById('entry-time').value = now.toTimeString().substring(0,5);
+            },
+
+            // --- DATA LOGIC ---
+            loadData() {
+                const stored = localStorage.getItem('ControlliProData');
+                if (!stored) {
+                    this.data = { profiles: [] };
+                } else {
+                    try {
+                        this.data = JSON.parse(stored);
+                    } catch (e) {
+                        this.data = { profiles: [] };
+                    }
+                }
+            },
+
+            saveData() { localStorage.setItem('ControlliProData', JSON.stringify(this.data)); },
+
+            generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); },
+
+            // --- NAVIGATION ---
+            goBack() {
+                this.currentProfileId = null;
+                document.getElementById('view-profiles').classList.remove('hidden');
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-settings').classList.add('hidden');
+                document.getElementById('btn-back').classList.add('hidden');
+                this.renderProfiles();
+            },
+
+            openProfile(id) {
+                this.currentProfileId = id;
+                document.getElementById('view-profiles').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('btn-back').classList.remove('hidden');
+                this.renderDashboard();
+            },
+
+            showSettings() {
+                this.currentProfileId = null;
+                document.getElementById('view-profiles').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-settings').classList.remove('hidden');
+                document.getElementById('btn-back').classList.remove('hidden');
+            },
+
+            // --- PROFILES ---
+            selectAvatar(type) {
+                this.newProfileAvatar = type;
+                document.querySelectorAll('.avatar-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.avatar === type);
+                });
+            },
+
+            createProfile() {
+                const name = document.getElementById('input-profile-name').value.trim();
+                if (!name) return;
+
+                const themeIndex = this.data.profiles.length % this.profileThemes.length;
+                this.data.profiles.push({
+                    id: this.generateId(),
+                    name,
+                    logs: [], // Array dei log
+                    themeIndex,
+                    avatar: this.newProfileAvatar
+                });
+
+                this.saveData();
+                document.getElementById('input-profile-name').value = '';
+                this.closeModal('modal-add-profile');
+                this.renderProfiles();
+            },
+
+            renderProfiles() {
+                const container = document.getElementById('profiles-list');
+                container.innerHTML = '';
+                if (this.data.profiles.length === 0) {
+                    container.innerHTML = `<div class="text-center text-slate-400 py-10"><i class="fa-solid fa-users text-4xl mb-3 opacity-30"></i><p>Nessun profilo presente.</p></div>`;
+                    return;
+                }
+
+                const avatarIcons = {
+                    'man': 'fa-person',
+                    'woman': 'fa-person-dress',
+                    'grandpa': 'fa-person-cane',
+                    'heart': 'fa-heart'
+                };
+
+                this.data.profiles.forEach(p => {
+                    const theme = this.profileThemes[p.themeIndex] || this.profileThemes[0];
+                    const count = p.logs ? p.logs.length : 0;
+                    
+                    // Ultima misurazione
+                    let lastUpdate = "Nessun dato";
+                    if(count > 0) {
+                        const last = p.logs[0]; // Assumiamo ordinati
+                        const d = new Date(last.date);
+                        lastUpdate = d.toLocaleDateString('it-IT', {day:'numeric', month:'short'});
+                    }
+
+                    const div = document.createElement('div');
+                    div.className = `${theme.bg} ${theme.border} p-4 rounded-xl card-shadow flex justify-between items-center cursor-pointer border hover:shadow-md transition-all`;
+                    div.onclick = () => this.openProfile(p.id);
+
+                    const iconContent = (p.avatar && avatarIcons[p.avatar]) 
+                        ? `<i class="fa-solid ${avatarIcons[p.avatar]} text-xl"></i>` 
+                        : p.name.charAt(0).toUpperCase();
+
+                    div.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full ${theme.iconBg} ${theme.iconText} flex items-center justify-center font-bold shadow-sm border border-white/50">
+                                ${iconContent}
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-lg">${p.name}</h3>
+                                <p class="text-xs text-slate-500 font-medium">Ultimo agg: ${lastUpdate}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                             <span class="text-xs font-bold bg-white px-2 py-1 rounded-md text-slate-500 shadow-sm">${count} reg.</span>
+                             <i class="fa-solid fa-chevron-right text-slate-300 ml-2"></i>
+                        </div>`;
+                    container.appendChild(div);
+                });
+            },
+
+            openEditProfileModal() {
+                const p = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (p) {
+                    document.getElementById('input-edit-profile-name').value = p.name;
+                    this.showModal('modal-edit-profile');
+                }
+            },
+
+            saveProfileName() {
+                const newName = document.getElementById('input-edit-profile-name').value.trim();
+                const p = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (p && newName) { p.name = newName; this.saveData(); this.renderDashboard(); this.closeModal('modal-edit-profile'); }
+            },
+
+            deleteCurrentProfile() {
+                if (confirm("Eliminare definitivamente questo profilo e tutti i dati?")) {
+                    this.data.profiles = this.data.profiles.filter(x => x.id !== this.currentProfileId);
+                    this.saveData(); this.goBack();
+                }
+            },
+
+            // --- DASHBOARD LOGIC ---
+
+            renderDashboard() {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!profile) return;
+                
+                document.getElementById('current-profile-name').textContent = profile.name;
+
+                // Ordina logs per data/ora decrescente
+                if(!profile.logs) profile.logs = [];
+                profile.logs.sort((a,b) => {
+                    const da = new Date(a.date + 'T' + a.time);
+                    const db = new Date(b.date + 'T' + b.time);
+                    return db - da;
+                });
+
+                // Calcola Statistiche Veloci (Ultimi valori inseriti per tipo)
+                const lastPress = profile.logs.find(l => l.type === 'pressure');
+                const lastGluc = profile.logs.find(l => l.type === 'glucose');
+                const lastOxy = profile.logs.find(l => l.type === 'oxygen');
+
+                document.getElementById('stat-pressure').innerHTML = lastPress ? `${lastPress.val1}/${lastPress.val2}` : '-';
+                document.getElementById('stat-glucose').innerHTML = lastGluc ? `${lastGluc.val1}` : '-';
+                document.getElementById('stat-oxygen').innerHTML = lastOxy ? `${lastOxy.val1}%` : '-';
+
+                // Render Lista
+                const container = document.getElementById('logs-list');
+                container.innerHTML = '';
+                
+                if (profile.logs.length === 0) {
+                    document.getElementById('logs-empty-state').classList.remove('hidden');
+                } else {
+                    document.getElementById('logs-empty-state').classList.add('hidden');
+                    
+                    // Raggruppa per Giorno
+                    let currentDay = null;
+
+                    profile.logs.forEach(log => {
+                        // Header Giorno
+                        if (log.date !== currentDay) {
+                            currentDay = log.date;
+                            const dObj = new Date(currentDay);
+                            const dayHeader = document.createElement('div');
+                            dayHeader.className = "sticky top-0 bg-[#fdf2f8]/95 backdrop-blur-sm py-2 px-1 z-10 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-pink-100 flex justify-between items-end";
+                            
+                            // Formatta data (es. Lunedì 12 Ottobre)
+                            const dateStr = dObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+                            dayHeader.innerHTML = `<span>${dateStr}</span>`;
+                            container.appendChild(dayHeader);
+                        }
+
+                        // Card
+                        const el = document.createElement('div');
+                        let contentHTML = '';
+                        let typeClasses = '';
+                        let badgeHTML = '';
+
+                        // Logica specifica per tipo
+                        if (log.type === 'pressure') {
+                            typeClasses = 'border-pressure bg-pressure';
+                            // Logica Alert semplice
+                            let status = 'ok';
+                            if (log.val1 >= 140 || log.val2 >= 90) status = 'alert';
+                            else if (log.val1 >= 130 || log.val2 >= 85) status = 'warn';
+                            
+                            const badgeClass = status === 'alert' ? 'val-alert' : (status === 'warn' ? 'val-warn' : 'val-ok');
+                            const badgeText = status === 'alert' ? 'ALTA' : (status === 'warn' ? 'LIMITI' : 'OPTIMAL');
+                            
+                            badgeHTML = `<span class="val-badge ${badgeClass}">${badgeText}</span>`;
+
+                            contentHTML = `
+                                <div class="flex items-center gap-3">
+                                    <div class="text-3xl text-rose-600 w-8 text-center"><i class="fa-solid fa-heart-pulse"></i></div>
+                                    <div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-2xl font-bold text-slate-800">${log.val1}/${log.val2}</span>
+                                            <span class="text-xs text-slate-500 font-bold">mmHg</span>
+                                            ${badgeHTML}
+                                        </div>
+                                        <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (log.type === 'glucose') {
+                            typeClasses = 'border-glucose bg-glucose';
+                            
+                            let status = 'ok';
+                            // Logica basilare (molto approssimativa)
+                            if (log.context === 'digiuno' && log.val1 > 125) status = 'alert';
+                            else if (log.context === 'dopo-pasto' && log.val1 > 200) status = 'alert';
+                            
+                            const badgeClass = status === 'alert' ? 'val-alert' : 'val-ok';
+                            badgeHTML = status === 'alert' ? `<span class="val-badge ${badgeClass}">ALTA</span>` : '';
+
+                            const contextLabel = log.context === 'digiuno' ? 'Digiuno' : (log.context === 'dopo-pasto' ? 'Post-pasto' : 'Casuale');
+
+                            contentHTML = `
+                                <div class="flex items-center gap-3">
+                                    <div class="text-3xl text-purple-600 w-8 text-center"><i class="fa-solid fa-droplet"></i></div>
+                                    <div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-2xl font-bold text-slate-800">${log.val1}</span>
+                                            <span class="text-xs text-slate-500 font-bold">mg/dL</span>
+                                            ${badgeHTML}
+                                        </div>
+                                        <div class="text-xs text-slate-500 italic">${contextLabel}</div>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (log.type === 'oxygen') {
+                            typeClasses = 'border-oxygen bg-oxygen';
+                            
+                            let status = 'ok';
+                            if (log.val1 < 95) status = 'warn';
+                            if (log.val1 < 90) status = 'alert';
+                            
+                            const badgeClass = status === 'alert' ? 'val-alert' : (status === 'warn' ? 'val-warn' : 'val-ok');
+                            badgeHTML = status !== 'ok' ? `<span class="val-badge ${badgeClass}">BASSA</span>` : `<span class="val-badge ${badgeClass}">OK</span>`;
+
+                            contentHTML = `
+                                <div class="flex items-center gap-3">
+                                    <div class="text-3xl text-cyan-600 w-8 text-center"><i class="fa-solid fa-lungs"></i></div>
+                                    <div>
+                                        <div class="flex items-baseline gap-2">
+                                            <span class="text-2xl font-bold text-slate-800">${log.val1}%</span>
+                                            <span class="text-xs text-slate-500 font-bold">SpO2</span>
+                                            ${badgeHTML}
+                                        </div>
+                                        <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
+                                    </div>
+                                </div>
+                            `;
+                        }
+
+                        el.className = `measure-card ${typeClasses} p-3 rounded-xl card-shadow mb-3 flex items-center justify-between`;
+                        el.innerHTML = `
+                            <div class="flex-1">
+                                ${contentHTML}
+                                ${log.notes ? `<div class="mt-2 text-[11px] text-slate-400 border-t border-black/5 pt-1 truncate max-w-[200px]"><i class="fa-solid fa-note-sticky mr-1"></i> ${log.notes}</div>` : ''}
+                            </div>
+                            <div class="flex flex-col items-end gap-1 ml-2">
+                                <span class="text-[10px] font-bold text-slate-400 bg-white/60 px-1 rounded">${log.time}</span>
+                                <button onclick="app.deleteLog('${log.id}')" class="text-slate-300 hover:text-red-500 p-2"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                        `;
+                        container.appendChild(el);
+                    });
+                }
+            },
+
+            // --- ENTRY LOGIC ---
+
+            prepareNewEntry() {
+                this.selectEntryType('pressure');
+                document.getElementById('input-sys').value = '';
+                document.getElementById('input-dia').value = '';
+                document.getElementById('input-pulse-p').value = '';
+                document.getElementById('input-glucose').value = '';
+                document.getElementById('input-spo2').value = '';
+                document.getElementById('input-pulse-o').value = '';
+                document.getElementById('input-notes').value = '';
+                this.showModal('modal-entry');
+            },
+
+            selectEntryType(type) {
+                this.currentEntryType = type;
+                
+                // UI Bottoni
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.type === type);
+                });
+
+                // UI Campi
+                document.getElementById('fields-pressure').classList.add('hidden');
+                document.getElementById('fields-glucose').classList.add('hidden');
+                document.getElementById('fields-oxygen').classList.add('hidden');
+
+                document.getElementById(`fields-${type}`).classList.remove('hidden');
+            },
+
+            saveEntry() {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!profile) return;
+
+                const date = document.getElementById('entry-date').value;
+                const time = document.getElementById('entry-time').value;
+                const notes = document.getElementById('input-notes').value.trim();
+
+                if (!date || !time) return alert("Inserisci Data e Ora");
+
+                const entry = {
+                    id: this.generateId(),
+                    type: this.currentEntryType,
+                    date,
+                    time,
+                    notes,
+                    val1: null,
+                    val2: null,
+                    pulse: null,
+                    context: null
+                };
+
+                if (this.currentEntryType === 'pressure') {
+                    const sys = parseInt(document.getElementById('input-sys').value);
+                    const dia = parseInt(document.getElementById('input-dia').value);
+                    const pulse = parseInt(document.getElementById('input-pulse-p').value);
+                    
+                    if (!sys || !dia) return alert("Inserisci i valori di pressione");
+                    entry.val1 = sys;
+                    entry.val2 = dia;
+                    entry.pulse = pulse;
+                } 
+                else if (this.currentEntryType === 'glucose') {
+                    const val = parseInt(document.getElementById('input-glucose').value);
+                    const context = document.getElementById('input-glucose-context').value;
+                    
+                    if (!val) return alert("Inserisci il valore glicemico");
+                    entry.val1 = val;
+                    entry.context = context;
+                }
+                else if (this.currentEntryType === 'oxygen') {
+                    const spo2 = parseInt(document.getElementById('input-spo2').value);
+                    const pulse = parseInt(document.getElementById('input-pulse-o').value);
+                    
+                    if (!spo2) return alert("Inserisci la saturazione");
+                    entry.val1 = spo2;
+                    entry.pulse = pulse;
+                }
+
+                if (!profile.logs) profile.logs = [];
+                profile.logs.push(entry);
+
+                this.saveData();
+                this.closeModal('modal-entry');
+                this.renderDashboard();
+            },
+
+            deleteLog(id) {
+                if(confirm("Eliminare questa misurazione?")) {
+                    const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                    profile.logs = profile.logs.filter(l => l.id !== id);
+                    this.saveData();
+                    this.renderDashboard();
+                }
+            },
+
+            // --- UTILS ---
+            showModal(id) { document.getElementById(id).classList.remove('hidden'); },
+            closeModal(id) { document.getElementById(id).classList.add('hidden'); },
+
+            exportProfileTxt() {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!profile) return;
+                
+                let content = `REPORT SALUTE: ${profile.name.toUpperCase()}\n`;
+                content += `Generato il: ${new Date().toLocaleDateString('it-IT')}\n`;
+                content += `--------------------------------------------------\n\n`;
+
+                // Ordina per data
+                const logs = [...profile.logs].sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+
+                logs.forEach(l => {
+                    content += `[${l.date} ${l.time}] `;
+                    if(l.type === 'pressure') content += `PRESSIONE: ${l.val1}/${l.val2} mmHg`;
+                    if(l.type === 'glucose') content += `GLICEMIA: ${l.val1} mg/dL (${l.context})`;
+                    if(l.type === 'oxygen') content += `SATURAZIONE: ${l.val1}% SpO2`;
+                    
+                    if(l.pulse) content += ` | Puls: ${l.pulse}`;
+                    if(l.notes) content += ` | Note: ${l.notes}`;
+                    content += `\n`;
+                });
+
+                const blob = new Blob([content], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Report_${profile.name.replace(/\s+/g, '_')}.txt`;
+                a.click();
+            },
+
+            exportData() {
+                const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ControlliPro_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+            },
+
+            triggerImport() { document.getElementById('import-file').click(); },
+            handleImport(input) {
+                const file = input.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        if (json && Array.isArray(json.profiles)) {
+                            this.data = json;
+                            this.saveData();
+                            this.goBack();
+                            alert("Dati importati con successo!");
+                        }
+                    } catch (err) { alert("File non valido."); }
+                };
+                reader.readAsText(file);
+                input.value = '';
+            },
+
+            resetAllData() {
+                if (confirm("Attenzione: perderai tutti i profili e le misurazioni. Continuare?")) {
+                    this.data = { profiles: [] };
+                    this.saveData();
+                    this.goBack();
+                }
+            },
+
+            setupManifest() {
+                const manifest = {
+                    "name": "ControlliPro",
+                    "short_name": "Controlli",
+                    "start_url": ".",
+                    "display": "standalone",
+                    "background_color": "#fdf2f8",
+                    "theme_color": "#ec4899",
+                    "icons": [{ "src": "https://img.icons8.com/color/192/heart-monitor.png", "sizes": "192x192", "type": "image/png" }]
+                };
+                const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+                document.getElementById('my-manifest').setAttribute('href', URL.createObjectURL(blob));
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
