@@ -15,6 +15,9 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Chart.js for Graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -27,12 +30,11 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #fdf2f8; /* Sfondo leggermente rosato/clinico */
+            background-color: #fdf2f8;
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
         }
 
-        /* Pulsanti e input stile MedicinePro */
         .type-btn {
             height: 40px;
             font-size: 12px;
@@ -48,16 +50,27 @@
             transition: all 0.2s;
         }
 
-        .type-btn.selected {
-            border-color: transparent;
-            color: white;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
+            .type-btn.selected {
+                border-color: transparent;
+                color: white;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            }
 
-        /* Varianti colori per tipo misurazione */
-        .type-btn.selected[data-type="pressure"] { background-color: #e11d48; } /* Rosso */
-        .type-btn.selected[data-type="glucose"] { background-color: #9333ea; } /* Viola */
-        .type-btn.selected[data-type="oxygen"] { background-color: #0891b2; } /* Ciano */
+                .type-btn.selected[data-type="pressure"] {
+                    background-color: #e11d48;
+                }
+
+                .type-btn.selected[data-type="glucose"] {
+                    background-color: #9333ea;
+                }
+
+                .type-btn.selected[data-type="oxygen"] {
+                    background-color: #0891b2;
+                }
+
+                .type-btn.selected[data-type="temperature"] {
+                    background-color: #f59e0b;
+                }
 
         .avatar-btn {
             transition: all 0.2s;
@@ -65,60 +78,105 @@
             opacity: 0.6;
         }
 
-        .avatar-btn.selected {
-            border-color: #db2777;
-            background-color: #fce7f3;
-            color: #db2777;
-            opacity: 1;
-            transform: scale(1.05);
-        }
+            .avatar-btn.selected {
+                border-color: #db2777;
+                background-color: #fce7f3;
+                color: #db2777;
+                opacity: 1;
+                transform: scale(1.05);
+            }
 
         .card-shadow {
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
 
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
 
         .modal-overlay {
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(2px);
         }
 
-        .fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
         }
 
-        /* Stili specifici Card Misurazione */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .measure-card {
             position: relative;
             padding-left: 1rem;
             overflow: hidden;
         }
-        .measure-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 5px;
+
+            .measure-card::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 5px;
+            }
+
+        .border-pressure {
+            border-left: 5px solid #e11d48;
         }
 
-        .border-pressure { border-left: 5px solid #e11d48; }
-        .bg-pressure { background-color: #fff1f2; }
-        
-        .border-glucose { border-left: 5px solid #9333ea; }
-        .bg-glucose { background-color: #faf5ff; }
+        .bg-pressure {
+            background-color: #fff1f2;
+        }
 
-        .border-oxygen { border-left: 5px solid #0891b2; }
-        .bg-oxygen { background-color: #ecfeff; }
+        .border-glucose {
+            border-left: 5px solid #9333ea;
+        }
 
-        .xs\:inline { display: none; }
-        @media (min-width: 400px) { .xs\:inline { display: inline; } }
+        .bg-glucose {
+            background-color: #faf5ff;
+        }
 
-        /* Badge Valori */
+        .border-oxygen {
+            border-left: 5px solid #0891b2;
+        }
+
+        .bg-oxygen {
+            background-color: #ecfeff;
+        }
+
+        .border-temperature {
+            border-left: 5px solid #f59e0b;
+        }
+
+        .bg-temperature {
+            background-color: #fffbeb;
+        }
+
+        .xs\:inline {
+            display: none;
+        }
+
+        @media (min-width: 400px) {
+            .xs\:inline {
+                display: inline;
+            }
+        }
+
         .val-badge {
             font-size: 10px;
             padding: 2px 6px;
@@ -126,10 +184,34 @@
             font-weight: 700;
             text-transform: uppercase;
         }
-        .val-ok { background-color: #dcfce7; color: #166534; }
-        .val-warn { background-color: #ffedd5; color: #9a3412; }
-        .val-alert { background-color: #fee2e2; color: #991b1b; }
 
+        .val-ok {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+
+        .val-warn {
+            background-color: #ffedd5;
+            color: #9a3412;
+        }
+
+        .val-alert {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Loading overlay */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
     </style>
 </head>
 <body class="text-slate-800 h-screen flex flex-col overflow-hidden">
@@ -160,7 +242,7 @@
         <section id="view-profiles" class="fade-in space-y-4">
             <div class="bg-white p-6 rounded-2xl card-shadow text-center mb-6 border border-pink-100">
                 <h2 class="text-2xl font-bold text-slate-800 mb-2">I tuoi Profili</h2>
-                <p class="text-slate-500 text-sm">Tieni traccia di pressione, glicemia e ossigeno.</p>
+                <p class="text-slate-500 text-sm">Tieni traccia di pressione, glicemia, ossigeno e temperatura.</p>
             </div>
             <div id="profiles-list" class="space-y-3"></div>
             <button onclick="app.showModal('modal-add-profile')" class="w-full mt-6 bg-pink-600 hover:bg-pink-700 text-white font-semibold py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -170,7 +252,9 @@
 
         <!-- VISTA DETTAGLIO DATI -->
         <section id="view-dashboard" class="hidden fade-in pb-24">
-            <div class="flex justify-between items-start mb-4">
+
+            <!-- Info Profilo -->
+            <div class="flex justify-between items-start mb-2">
                 <div class="flex-1">
                     <div class="flex items-center gap-2">
                         <h2 id="current-profile-name" class="text-2xl font-bold text-slate-800 truncate max-w-[180px]">Profilo</h2>
@@ -178,20 +262,32 @@
                             <i class="fa-solid fa-pencil text-sm"></i>
                         </button>
                     </div>
-                    <p id="current-date-display" class="text-[10px] text-slate-500 uppercase font-bold tracking-wider mt-1"></p>
                 </div>
                 <div class="flex flex-col gap-2 items-end">
-                    <button onclick="app.exportProfileTxt()" class="text-pink-600 text-xs px-3 py-1.5 border border-pink-200 rounded-lg hover:bg-pink-50 flex items-center gap-1 transition-all">
-                        <i class="fa-solid fa-file-lines"></i> <span class="xs:inline">Report</span>
-                    </button>
-                    <button onclick="app.deleteCurrentProfile()" class="text-red-500 text-xs px-3 py-1.5 border border-red-200 rounded-lg hover:bg-red-50 flex items-center gap-1 transition-all">
-                        <i class="fa-solid fa-trash"></i> <span class="xs:inline">Elimina</span>
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="app.openCharts()" class="text-white bg-pink-500 text-xs px-3 py-1.5 rounded-lg hover:bg-pink-600 flex items-center gap-1 transition-all shadow-sm">
+                            <i class="fa-solid fa-chart-line"></i> <span class="xs:inline">Grafici</span>
+                        </button>
+                        <button onclick="app.exportProfileTxt()" class="text-pink-600 text-xs px-3 py-1.5 border border-pink-200 rounded-lg hover:bg-pink-50 flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-file-lines"></i> <span class="xs:inline">Report</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
+            <!-- Card Dati Clinici -->
+            <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl mb-4 flex items-center justify-between shadow-sm">
+                <div id="clinical-info-display" class="text-xs text-indigo-800 flex flex-col gap-1">
+                    <span class="font-bold uppercase opacity-60">Dati Clinici</span>
+                    <span class="italic">Nessun dato inserito</span>
+                </div>
+                <button onclick="app.openEditInfoModal()" class="bg-white text-indigo-600 w-8 h-8 rounded-full shadow flex items-center justify-center active:scale-90 transition-transform">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </button>
+            </div>
+
             <!-- Dashboard Stats Veloci -->
-            <div class="grid grid-cols-3 gap-2 mb-6">
+            <div class="grid grid-cols-2 gap-2 mb-6">
                 <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-rose-500">
                     <div class="text-rose-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-heart-crack"></i> Press</div>
                     <div id="stat-pressure" class="text-sm font-bold text-slate-700">-</div>
@@ -203,6 +299,10 @@
                 <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-cyan-500">
                     <div class="text-cyan-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-lungs"></i> Sat</div>
                     <div id="stat-oxygen" class="text-sm font-bold text-slate-700">-</div>
+                </div>
+                <div class="bg-white p-2 rounded-xl card-shadow text-center border-b-4 border-amber-500">
+                    <div class="text-amber-500 text-xs font-bold uppercase mb-1"><i class="fa-solid fa-temperature-half"></i> Temp</div>
+                    <div id="stat-temperature" class="text-sm font-bold text-slate-700">-</div>
                 </div>
             </div>
 
@@ -219,9 +319,55 @@
             </button>
         </section>
 
+        <!-- VISTA GRAFICI -->
+        <section id="view-charts" class="hidden fade-in space-y-4 h-full flex flex-col">
+            <div class="flex items-center gap-3 mb-2">
+                <h2 class="text-2xl font-bold text-slate-800">Andamenti</h2>
+            </div>
+
+            <!-- Chart Type Selector -->
+            <div class="bg-white p-2 rounded-xl card-shadow grid grid-cols-4 gap-1">
+                <button onclick="app.renderChart('pressure')" class="chart-btn p-2 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 flex flex-col items-center gap-1 transition-all" data-chart="pressure">
+                    <i class="fa-solid fa-heart-pulse text-rose-500"></i> Press
+                </button>
+                <button onclick="app.renderChart('glucose')" class="chart-btn p-2 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 flex flex-col items-center gap-1 transition-all" data-chart="glucose">
+                    <i class="fa-solid fa-droplet text-purple-500"></i> Glic
+                </button>
+                <button onclick="app.renderChart('oxygen')" class="chart-btn p-2 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 flex flex-col items-center gap-1 transition-all" data-chart="oxygen">
+                    <i class="fa-solid fa-lungs text-cyan-500"></i> Sat
+                </button>
+                <button onclick="app.renderChart('temperature')" class="chart-btn p-2 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-50 flex flex-col items-center gap-1 transition-all" data-chart="temperature">
+                    <i class="fa-solid fa-temperature-half text-amber-500"></i> Temp
+                </button>
+            </div>
+
+            <!-- Chart Container -->
+            <div class="bg-white p-4 rounded-2xl card-shadow flex-1 relative flex flex-col">
+                <div class="relative w-full h-full min-h-[300px]">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+                <div id="chart-empty-msg" class="hidden absolute inset-0 flex items-center justify-center text-slate-400 flex-col">
+                    <i class="fa-solid fa-chart-simple text-4xl mb-2 opacity-30"></i>
+                    <span class="text-sm">Dati insufficienti</span>
+                </div>
+            </div>
+        </section>
+
         <!-- VISTA IMPOSTAZIONI -->
         <section id="view-settings" class="hidden fade-in space-y-6">
             <h2 class="text-2xl font-bold text-slate-800 mb-4">Impostazioni</h2>
+
+            <!-- API Key -->
+            <div class="bg-white p-5 rounded-2xl card-shadow space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Google Gemini API Key</label>
+                    <input type="password" id="input-settings-apikey" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Inserisci la tua API Key">
+                    <p class="text-[11px] text-slate-400 mt-2 italic">La chiave serve per le funzioni AI (Analisi valori e resoconti).</p>
+                </div>
+                <button onclick="app.saveSettings()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow-md active:scale-95 transition-all">
+                    Salva Impostazioni
+                </button>
+            </div>
 
             <div class="bg-white p-5 rounded-2xl card-shadow">
                 <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
@@ -244,8 +390,13 @@
         </section>
     </main>
 
+    <!-- LOADING OVERLAY -->
+    <div id="loading-overlay">
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-pink-500 border-t-transparent mb-4"></div>
+        <p id="loading-text" class="font-bold">Il Dottore sta analizzando...</p>
+    </div>
+
     <!-- MODALI -->
-    
     <!-- Modale Profilo -->
     <div id="modal-add-profile" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -269,11 +420,120 @@
     <!-- Modale Edit Nome Profilo -->
     <div id="modal-edit-profile" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 class="text-xl font-bold mb-4">Rinomina Profilo</h3>
-            <input type="text" id="input-edit-profile-name" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none">
-            <div class="flex justify-end gap-3 mt-6">
+            <h3 class="text-xl font-bold mb-4">Gestione Profilo</h3>
+
+            <p class="text-xs text-slate-500 font-bold uppercase mb-2">Avatar</p>
+            <div class="grid grid-cols-4 gap-3 mb-4">
+                <button onclick="app.selectEditAvatar('man')" class="avatar-btn avatar-edit-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="man"><i class="fa-solid fa-person"></i></button>
+                <button onclick="app.selectEditAvatar('woman')" class="avatar-btn avatar-edit-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="woman"><i class="fa-solid fa-person-dress"></i></button>
+                <button onclick="app.selectEditAvatar('grandpa')" class="avatar-btn avatar-edit-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="grandpa"><i class="fa-solid fa-person-cane"></i></button>
+                <button onclick="app.selectEditAvatar('heart')" class="avatar-btn avatar-edit-btn rounded-xl p-2 flex items-center justify-center text-2xl bg-slate-50 text-slate-400" data-avatar="heart"><i class="fa-solid fa-heart"></i></button>
+            </div>
+
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nome</label>
+            <input type="text" id="input-edit-profile-name" class="w-full p-3 mb-4 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pink-500 outline-none">
+
+            <button onclick="app.deleteCurrentProfile()" class="w-full py-3 text-red-500 border border-red-200 rounded-xl hover:bg-red-50 flex items-center justify-center gap-2 mb-2">
+                <i class="fa-solid fa-trash"></i> Elimina Profilo
+            </button>
+
+            <div class="flex justify-end gap-3 mt-4">
                 <button onclick="app.closeModal('modal-edit-profile')" class="px-4 py-2 text-slate-500">Annulla</button>
                 <button onclick="app.saveProfileName()" class="px-6 py-2 bg-pink-600 text-white rounded-lg font-medium">Salva</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Dati Clinici -->
+    <div id="modal-edit-info" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 fade-in">
+            <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-user-doctor text-indigo-500"></i> Dati Clinici
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Questi dati aiuteranno l'AI a fornire analisi più precise.</p>
+
+            <div class="grid grid-cols-3 gap-3 mb-3">
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data di Nascita</label>
+                    <input type="date" id="info-dob" class="w-full p-2 border border-slate-200 rounded-lg text-sm text-center bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Peso (kg)</label>
+                    <input type="number" id="info-weight" class="w-full p-2 border border-slate-200 rounded-lg text-sm text-center" placeholder="Kg">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Altezza</label>
+                    <input type="number" id="info-height" class="w-full p-2 border border-slate-200 rounded-lg text-sm text-center" placeholder="cm">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Patologie / Note Mediche</label>
+                <textarea id="info-pathologies" rows="3" class="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Es. Ipertensione, Diabete tipo 2, Aritmia..."></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="app.closeModal('modal-edit-info')" class="px-4 py-2 text-slate-500">Chiudi</button>
+                <button onclick="app.saveInfo()" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium shadow-md">Salva Dati</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Resoconto AI -->
+    <div id="modal-ai-result" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fade-in relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"></div>
+            <div class="flex justify-between items-start mb-4">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500"></i> Analisi AI
+                </h3>
+                <button onclick="app.closeModal('modal-ai-result')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-times text-xl"></i></button>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 text-sm leading-relaxed text-slate-700 max-h-[60vh] overflow-y-auto mb-4" id="ai-result-content">
+                <!-- Contenuto AI -->
+            </div>
+
+            <div class="text-[10px] text-slate-400 text-center italic">
+                L'analisi è generata da AI e non sostituisce il parere medico.
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale No API -->
+    <div id="modal-no-api" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 fade-in text-center">
+            <div class="text-4xl text-amber-400 mb-3"><i class="fa-solid fa-key"></i></div>
+            <h3 class="text-xl font-bold text-slate-800 mb-2">Chiave Mancante</h3>
+            <p class="text-sm text-slate-500 mb-6 leading-relaxed">
+                Per utilizzare l'analisi AI devi inserire la tua chiave API Google Gemini nelle impostazioni.
+            </p>
+            <div class="flex flex-col gap-2">
+                <button onclick="app.goToSettingsFromModal()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold shadow-md active:scale-95 transition-all">
+                    Vai a Impostazioni
+                </button>
+                <button onclick="app.closeModal('modal-no-api')" class="w-full bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold hover:bg-slate-200 transition-colors">
+                    Chiudi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale Conferma Eliminazione -->
+    <div id="modal-confirm" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 fade-in text-center">
+            <div class="text-4xl text-red-500 mb-3"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h3 id="confirm-title" class="text-xl font-bold text-slate-800 mb-2">Eliminare?</h3>
+            <p id="confirm-message" class="text-sm text-slate-500 mb-6 leading-relaxed">
+                Questa azione è irreversibile.
+            </p>
+            <div class="flex gap-3">
+                <button onclick="app.closeModal('modal-confirm')" class="flex-1 bg-slate-100 text-slate-500 py-2.5 rounded-xl font-bold hover:bg-slate-200 transition-colors">
+                    Annulla
+                </button>
+                <button onclick="app.executeDelete()" class="flex-1 bg-red-500 text-white py-2.5 rounded-xl font-bold shadow-md hover:bg-red-600 transition-transform active:scale-95">
+                    Elimina
+                </button>
             </div>
         </div>
     </div>
@@ -282,15 +542,15 @@
     <div id="modal-entry" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4 fade-in">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-0 overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b border-slate-100 bg-slate-50">
-                <h3 class="text-lg font-bold text-slate-800 text-center">Nuova Misurazione</h3>
+                <h3 id="modal-entry-title" class="text-lg font-bold text-slate-800 text-center">Nuova Misurazione</h3>
             </div>
-            
-            <div class="p-5 overflow-y-auto custom-scrollbar space-y-5">
-                
+
+            <div id="modal-entry-content" class="p-5 overflow-y-auto custom-scrollbar space-y-5">
+
                 <!-- Selezione Tipo -->
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2 text-center">Cosa vuoi registrare?</label>
-                    <div class="grid grid-cols-3 gap-2">
+                    <div class="grid grid-cols-2 gap-2">
                         <button onclick="app.selectEntryType('pressure')" class="type-btn" data-type="pressure">
                             <i class="fa-solid fa-heart-crack mr-1"></i> Press.
                         </button>
@@ -299,6 +559,9 @@
                         </button>
                         <button onclick="app.selectEntryType('oxygen')" class="type-btn" data-type="oxygen">
                             <i class="fa-solid fa-lungs mr-1"></i> Satur.
+                        </button>
+                        <button onclick="app.selectEntryType('temperature')" class="type-btn" data-type="temperature">
+                            <i class="fa-solid fa-temperature-half mr-1"></i> Temp.
                         </button>
                     </div>
                 </div>
@@ -316,7 +579,6 @@
                 </div>
 
                 <!-- CAMPI INPUT DINAMICI -->
-                
                 <!-- Pressione -->
                 <div id="fields-pressure" class="hidden space-y-4 animate-fadeIn">
                     <div class="flex items-center gap-3">
@@ -364,12 +626,29 @@
                     </div>
                 </div>
 
+                <!-- Temperatura -->
+                <div id="fields-temperature" class="hidden space-y-4 animate-fadeIn">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Temperatura (°C)</label>
+                        <input type="number" id="input-temp" placeholder="36.5" step="0.1" class="w-full p-4 border-2 border-slate-100 rounded-xl focus:border-amber-500 outline-none text-3xl font-bold text-center text-amber-600 placeholder-amber-200">
+                    </div>
+                </div>
+
                 <!-- Note -->
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Note opzionali</label>
                     <textarea id="input-notes" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-slate-400" placeholder="Es. Dopo camminata, sensazione di vertigini..."></textarea>
                 </div>
 
+                <!-- NEW AI RESPONSE IN EDIT MODE -->
+                <div id="entry-ai-response-wrapper" class="hidden mt-4 bg-indigo-50 border border-indigo-100 p-3 rounded-xl">
+                    <h4 class="text-xs font-bold text-indigo-800 mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Analisi AI Salvata
+                    </h4>
+                    <div id="entry-ai-response-text" class="text-sm text-slate-700 leading-relaxed"></div>
+                </div>
+
+                <input type="hidden" id="entry-edit-id">
             </div>
 
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
@@ -381,10 +660,13 @@
 
     <script>
         const app = {
-            data: { profiles: [] },
+            data: { profiles: [], apiKey: "" },
             currentProfileId: null,
             newProfileAvatar: null,
             currentEntryType: 'pressure',
+            currentChart: null,
+            pendingDeleteCallback: null,
+            editProfileAvatar: null, // New: Avatar selection state for edit modal
 
             // 🎨 TEMI DI COLORE
             profileThemes: [
@@ -398,29 +680,35 @@
                 this.loadData();
                 this.renderProfiles();
                 this.setupManifest();
-                
-                // Set data odierna
-                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                document.getElementById('current-date-display').textContent = new Date().toLocaleDateString('it-IT', options);
-                
+                this.setupSwipe(); // Init swipe listener
+
                 document.getElementById('btn-back').addEventListener('click', () => this.goBack());
-                
-                // Default date/time in modal
+
+                // Set initial date/time
                 const now = new Date();
                 document.getElementById('entry-date').valueAsDate = now;
-                document.getElementById('entry-time').value = now.toTimeString().substring(0,5);
+                document.getElementById('entry-time').value = now.toTimeString().substring(0, 5);
             },
 
             // --- DATA LOGIC ---
             loadData() {
                 const stored = localStorage.getItem('ControlliProData');
                 if (!stored) {
-                    this.data = { profiles: [] };
+                    this.data = { profiles: [], apiKey: "" };
                 } else {
                     try {
                         this.data = JSON.parse(stored);
+                        if (!this.data.apiKey) this.data.apiKey = "";
+                        // Ensure profiles have info object with dob
+                        this.data.profiles.forEach(p => {
+                            if (!p.info) p.info = { dob: '', weight: '', height: '', pathologies: '' };
+                            if (p.info.age && !p.info.dob) {
+                                // Legacy support: keep age if no dob
+                            }
+                            if (!p.logs) p.logs = [];
+                        });
                     } catch (e) {
-                        this.data = { profiles: [] };
+                        this.data = { profiles: [], apiKey: "" };
                     }
                 }
             },
@@ -429,12 +717,82 @@
 
             generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2); },
 
+            // --- UTILS ---
+            getAge(dobString) {
+                if (!dobString) return null;
+                const birthDate = new Date(dobString);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const m = today.getMonth() - birthDate.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            },
+
+            // --- CONFIRMATION SYSTEM ---
+            askConfirm(title, message, callback) {
+                document.getElementById('confirm-title').innerText = title;
+                document.getElementById('confirm-message').innerText = message;
+                this.pendingDeleteCallback = callback;
+                this.showModal('modal-confirm');
+            },
+
+            executeDelete() {
+                if (this.pendingDeleteCallback) {
+                    this.pendingDeleteCallback();
+                }
+                this.closeModal('modal-confirm');
+                this.pendingDeleteCallback = null;
+            },
+
+            // --- SWIPE LOGIC ---
+            touchStartX: 0,
+            touchEndX: 0,
+
+            setupSwipe() {
+                const container = document.getElementById('app-container');
+
+                container.addEventListener('touchstart', (e) => {
+                    this.touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+
+                container.addEventListener('touchend', (e) => {
+                    this.touchEndX = e.changedTouches[0].screenX;
+                    this.handleSwipe();
+                }, { passive: true });
+            },
+
+            handleSwipe() {
+                // Check if any modal is open - if so, disable swipe nav
+                const openModal = document.querySelector('.modal-overlay:not(.hidden)');
+                if (openModal) return;
+
+                const diff = this.touchEndX - this.touchStartX;
+                const threshold = 70; // Lowered threshold for better responsiveness
+
+                // Swipe Right (Left to Right movement) -> Back navigation
+                if (diff > threshold) {
+                    const chartsVisible = !document.getElementById('view-charts').classList.contains('hidden');
+                    const dashboardVisible = !document.getElementById('view-dashboard').classList.contains('hidden');
+
+                    if (chartsVisible) {
+                        // Swipe Right in Charts -> Go to Dashboard
+                        this.openProfile(this.currentProfileId);
+                    } else if (dashboardVisible) {
+                        // Swipe Right in Dashboard -> Go to Home
+                        this.goBack();
+                    }
+                }
+            },
+
             // --- NAVIGATION ---
             goBack() {
                 this.currentProfileId = null;
                 document.getElementById('view-profiles').classList.remove('hidden');
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-settings').classList.add('hidden');
+                document.getElementById('view-charts').classList.add('hidden');
                 document.getElementById('btn-back').classList.add('hidden');
                 this.renderProfiles();
             },
@@ -443,6 +801,7 @@
                 this.currentProfileId = id;
                 document.getElementById('view-profiles').classList.add('hidden');
                 document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('view-charts').classList.add('hidden');
                 document.getElementById('btn-back').classList.remove('hidden');
                 this.renderDashboard();
             },
@@ -451,14 +810,28 @@
                 this.currentProfileId = null;
                 document.getElementById('view-profiles').classList.add('hidden');
                 document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-charts').classList.add('hidden');
                 document.getElementById('view-settings').classList.remove('hidden');
                 document.getElementById('btn-back').classList.remove('hidden');
+                document.getElementById('input-settings-apikey').value = this.data.apiKey || "";
+            },
+
+            saveSettings() {
+                this.data.apiKey = document.getElementById('input-settings-apikey').value.trim();
+                this.saveData();
+                alert("Impostazioni salvate!");
+                this.goBack();
+            },
+
+            goToSettingsFromModal() {
+                this.closeModal('modal-no-api');
+                this.showSettings();
             },
 
             // --- PROFILES ---
             selectAvatar(type) {
                 this.newProfileAvatar = type;
-                document.querySelectorAll('.avatar-btn').forEach(btn => {
+                document.querySelectorAll('#modal-add-profile .avatar-btn').forEach(btn => {
                     btn.classList.toggle('selected', btn.dataset.avatar === type);
                 });
             },
@@ -471,15 +844,29 @@
                 this.data.profiles.push({
                     id: this.generateId(),
                     name,
-                    logs: [], // Array dei log
+                    logs: [],
                     themeIndex,
-                    avatar: this.newProfileAvatar
+                    avatar: this.newProfileAvatar,
+                    info: { dob: '', weight: '', height: '', pathologies: '' }
                 });
 
                 this.saveData();
                 document.getElementById('input-profile-name').value = '';
                 this.closeModal('modal-add-profile');
                 this.renderProfiles();
+            },
+
+            deleteProfileFromList(id, event) {
+                event.stopPropagation();
+                this.askConfirm(
+                    "Elimina Profilo",
+                    "Sei sicuro di voler eliminare questo profilo e tutti i suoi dati? L'operazione non può essere annullata.",
+                    () => {
+                        this.data.profiles = this.data.profiles.filter(p => p.id !== id);
+                        this.saveData();
+                        this.renderProfiles();
+                    }
+                );
             },
 
             renderProfiles() {
@@ -500,37 +887,44 @@
                 this.data.profiles.forEach(p => {
                     const theme = this.profileThemes[p.themeIndex] || this.profileThemes[0];
                     const count = p.logs ? p.logs.length : 0;
-                    
-                    // Ultima misurazione
+
                     let lastUpdate = "Nessun dato";
-                    if(count > 0) {
-                        const last = p.logs[0]; // Assumiamo ordinati
+                    if (count > 0) {
+                        const logsSorted = [...p.logs].sort((a, b) => new Date(b.date + 'T' + b.time) - new Date(a.date + 'T' + a.time));
+                        const last = logsSorted[0];
                         const d = new Date(last.date);
-                        lastUpdate = d.toLocaleDateString('it-IT', {day:'numeric', month:'short'});
+                        lastUpdate = d.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
                     }
 
                     const div = document.createElement('div');
                     div.className = `${theme.bg} ${theme.border} p-4 rounded-xl card-shadow flex justify-between items-center cursor-pointer border hover:shadow-md transition-all`;
                     div.onclick = () => this.openProfile(p.id);
 
-                    const iconContent = (p.avatar && avatarIcons[p.avatar]) 
-                        ? `<i class="fa-solid ${avatarIcons[p.avatar]} text-xl"></i>` 
+                    const iconContent = (p.avatar && avatarIcons[p.avatar])
+                        ? `<i class="fa-solid ${avatarIcons[p.avatar]} text-xl"></i>`
                         : p.name.charAt(0).toUpperCase();
 
                     div.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-full ${theme.iconBg} ${theme.iconText} flex items-center justify-center font-bold shadow-sm border border-white/50">
-                                ${iconContent}
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full ${theme.iconBg} ${theme.iconText} flex items-center justify-center font-bold shadow-sm border border-white/50">
+                                    ${iconContent}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-slate-800 text-lg">${p.name}</h3>
+                                    <p class="text-xs text-slate-500 font-medium">Ultimo agg: ${lastUpdate}</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-lg">${p.name}</h3>
-                                <p class="text-xs text-slate-500 font-medium">Ultimo agg: ${lastUpdate}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                             <span class="text-xs font-bold bg-white px-2 py-1 rounded-md text-slate-500 shadow-sm">${count} reg.</span>
-                             <i class="fa-solid fa-chevron-right text-slate-300 ml-2"></i>
-                        </div>`;
+                            <div class="flex flex-col items-end gap-1">
+                                 <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold bg-white px-2 py-1 rounded-md text-slate-500 shadow-sm">${count} reg.</span>
+                                 </div>
+                                 <div class="flex items-center gap-3 mt-1">
+                                    <button onclick="app.deleteProfileFromList('${p.id}', event)" class="text-slate-300 hover:text-red-500 transition-colors p-1" title="Elimina Profilo">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                                 </div>
+                            </div>`;
                     container.appendChild(div);
                 });
             },
@@ -539,21 +933,73 @@
                 const p = this.data.profiles.find(x => x.id === this.currentProfileId);
                 if (p) {
                     document.getElementById('input-edit-profile-name').value = p.name;
+                    this.editProfileAvatar = p.avatar; // Set current avatar
+                    this.updateEditAvatarUI();
                     this.showModal('modal-edit-profile');
                 }
+            },
+
+            selectEditAvatar(type) {
+                this.editProfileAvatar = type;
+                this.updateEditAvatarUI();
+            },
+
+            updateEditAvatarUI() {
+                document.querySelectorAll('.avatar-edit-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.avatar === this.editProfileAvatar);
+                });
             },
 
             saveProfileName() {
                 const newName = document.getElementById('input-edit-profile-name').value.trim();
                 const p = this.data.profiles.find(x => x.id === this.currentProfileId);
-                if (p && newName) { p.name = newName; this.saveData(); this.renderDashboard(); this.closeModal('modal-edit-profile'); }
+                if (p && newName) {
+                    p.name = newName;
+                    p.avatar = this.editProfileAvatar; // Update avatar
+                    this.saveData();
+                    this.renderDashboard();
+                    this.closeModal('modal-edit-profile');
+                }
             },
 
             deleteCurrentProfile() {
-                if (confirm("Eliminare definitivamente questo profilo e tutti i dati?")) {
-                    this.data.profiles = this.data.profiles.filter(x => x.id !== this.currentProfileId);
-                    this.saveData(); this.goBack();
-                }
+                this.askConfirm(
+                    "Elimina Profilo",
+                    "Vuoi davvero eliminare questo profilo e tutti i dati associati?",
+                    () => {
+                        this.data.profiles = this.data.profiles.filter(x => x.id !== this.currentProfileId);
+                        this.saveData();
+                        this.closeModal('modal-edit-profile');
+                        this.goBack();
+                    }
+                );
+            },
+
+            // --- INFO CLINICHE ---
+            openEditInfoModal() {
+                const p = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!p) return;
+
+                document.getElementById('info-dob').value = p.info.dob || '';
+                document.getElementById('info-weight').value = p.info.weight || '';
+                document.getElementById('info-height').value = p.info.height || '';
+                document.getElementById('info-pathologies').value = p.info.pathologies || '';
+
+                this.showModal('modal-edit-info');
+            },
+
+            saveInfo() {
+                const p = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!p) return;
+
+                p.info.dob = document.getElementById('info-dob').value;
+                p.info.weight = document.getElementById('info-weight').value;
+                p.info.height = document.getElementById('info-height').value;
+                p.info.pathologies = document.getElementById('info-pathologies').value;
+
+                this.saveData();
+                this.renderDashboard();
+                this.closeModal('modal-edit-info');
             },
 
             // --- DASHBOARD LOGIC ---
@@ -561,146 +1007,206 @@
             renderDashboard() {
                 const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
                 if (!profile) return;
-                
+
                 document.getElementById('current-profile-name').textContent = profile.name;
 
-                // Ordina logs per data/ora decrescente
-                if(!profile.logs) profile.logs = [];
-                profile.logs.sort((a,b) => {
+                // Render Info Cliniche
+                const infoContainer = document.getElementById('clinical-info-display');
+                const i = profile.info;
+
+                let ageDisplay = null;
+                if (i.dob) {
+                    ageDisplay = `${this.getAge(i.dob)} Anni`;
+                } else if (i.age) {
+                    ageDisplay = `${i.age} Anni (da aggiornare)`;
+                }
+
+                if (ageDisplay || i.weight || i.pathologies) {
+                    let text = [];
+                    if (ageDisplay) text.push(ageDisplay);
+                    if (i.weight) text.push(`${i.weight} Kg`);
+                    if (i.height) text.push(`${i.height} cm`);
+
+                    let pathHtml = i.pathologies ? `<span class="truncate max-w-[200px] text-[10px] mt-0.5 opacity-80"><i class="fa-solid fa-file-medical"></i> ${i.pathologies}</span>` : '';
+
+                    infoContainer.innerHTML = `
+                            <div class="flex gap-2 font-semibold">${text.join(' · ')}</div>
+                            ${pathHtml}
+                        `;
+                } else {
+                    infoContainer.innerHTML = `
+                            <span class="font-bold uppercase opacity-60">Dati Clinici</span>
+                            <span class="italic text-[10px]">Nessun dato inserito</span>
+                        `;
+                }
+
+                // Ordina logs
+                if (!profile.logs) profile.logs = [];
+                profile.logs.sort((a, b) => {
                     const da = new Date(a.date + 'T' + a.time);
                     const db = new Date(b.date + 'T' + b.time);
                     return db - da;
                 });
 
-                // Calcola Statistiche Veloci (Ultimi valori inseriti per tipo)
+                // Stats Veloci
                 const lastPress = profile.logs.find(l => l.type === 'pressure');
                 const lastGluc = profile.logs.find(l => l.type === 'glucose');
                 const lastOxy = profile.logs.find(l => l.type === 'oxygen');
+                const lastTemp = profile.logs.find(l => l.type === 'temperature');
 
                 document.getElementById('stat-pressure').innerHTML = lastPress ? `${lastPress.val1}/${lastPress.val2}` : '-';
                 document.getElementById('stat-glucose').innerHTML = lastGluc ? `${lastGluc.val1}` : '-';
                 document.getElementById('stat-oxygen').innerHTML = lastOxy ? `${lastOxy.val1}%` : '-';
+                document.getElementById('stat-temperature').innerHTML = lastTemp ? `${lastTemp.val1}°` : '-';
 
                 // Render Lista
                 const container = document.getElementById('logs-list');
                 container.innerHTML = '';
-                
+
                 if (profile.logs.length === 0) {
                     document.getElementById('logs-empty-state').classList.remove('hidden');
                 } else {
                     document.getElementById('logs-empty-state').classList.add('hidden');
-                    
-                    // Raggruppa per Giorno
+
                     let currentDay = null;
 
                     profile.logs.forEach(log => {
-                        // Header Giorno
                         if (log.date !== currentDay) {
                             currentDay = log.date;
                             const dObj = new Date(currentDay);
-                            const dayHeader = document.createElement('div');
-                            dayHeader.className = "sticky top-0 bg-[#fdf2f8]/95 backdrop-blur-sm py-2 px-1 z-10 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-pink-100 flex justify-between items-end";
-                            
-                            // Formatta data (es. Lunedì 12 Ottobre)
                             const dateStr = dObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
+
+                            const dayHeader = document.createElement('div');
+                            dayHeader.className = "sticky top-0 bg-[#fdf2f8]/95 backdrop-blur-sm py-2 px-1 z-10 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-pink-100 flex justify-between items-end mt-2";
                             dayHeader.innerHTML = `<span>${dateStr}</span>`;
                             container.appendChild(dayHeader);
                         }
 
-                        // Card
+                        // Contenuto Card
                         const el = document.createElement('div');
                         let contentHTML = '';
                         let typeClasses = '';
                         let badgeHTML = '';
 
-                        // Logica specifica per tipo
+                        // --- LOGICHE TIPI MISURAZIONE ---
                         if (log.type === 'pressure') {
                             typeClasses = 'border-pressure bg-pressure';
-                            // Logica Alert semplice
                             let status = 'ok';
                             if (log.val1 >= 140 || log.val2 >= 90) status = 'alert';
                             else if (log.val1 >= 130 || log.val2 >= 85) status = 'warn';
-                            
+
                             const badgeClass = status === 'alert' ? 'val-alert' : (status === 'warn' ? 'val-warn' : 'val-ok');
-                            const badgeText = status === 'alert' ? 'ALTA' : (status === 'warn' ? 'LIMITI' : 'OPTIMAL');
-                            
+                            const badgeText = status === 'alert' ? 'ALTA' : (status === 'warn' ? 'LIMITI' : 'OK');
                             badgeHTML = `<span class="val-badge ${badgeClass}">${badgeText}</span>`;
 
                             contentHTML = `
-                                <div class="flex items-center gap-3">
-                                    <div class="text-3xl text-rose-600 w-8 text-center"><i class="fa-solid fa-heart-pulse"></i></div>
-                                    <div>
-                                        <div class="flex items-baseline gap-2">
-                                            <span class="text-2xl font-bold text-slate-800">${log.val1}/${log.val2}</span>
-                                            <span class="text-xs text-slate-500 font-bold">mmHg</span>
-                                            ${badgeHTML}
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-3xl text-rose-600 w-8 text-center"><i class="fa-solid fa-heart-pulse"></i></div>
+                                        <div>
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-2xl font-bold text-slate-800">${log.val1}/${log.val2}</span>
+                                                <span class="text-xs text-slate-500 font-bold">mmHg</span>
+                                                ${badgeHTML}
+                                            </div>
+                                            <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
                                         </div>
-                                        <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                         } else if (log.type === 'glucose') {
                             typeClasses = 'border-glucose bg-glucose';
-                            
                             let status = 'ok';
-                            // Logica basilare (molto approssimativa)
                             if (log.context === 'digiuno' && log.val1 > 125) status = 'alert';
                             else if (log.context === 'dopo-pasto' && log.val1 > 200) status = 'alert';
-                            
+
                             const badgeClass = status === 'alert' ? 'val-alert' : 'val-ok';
                             badgeHTML = status === 'alert' ? `<span class="val-badge ${badgeClass}">ALTA</span>` : '';
-
                             const contextLabel = log.context === 'digiuno' ? 'Digiuno' : (log.context === 'dopo-pasto' ? 'Post-pasto' : 'Casuale');
 
                             contentHTML = `
-                                <div class="flex items-center gap-3">
-                                    <div class="text-3xl text-purple-600 w-8 text-center"><i class="fa-solid fa-droplet"></i></div>
-                                    <div>
-                                        <div class="flex items-baseline gap-2">
-                                            <span class="text-2xl font-bold text-slate-800">${log.val1}</span>
-                                            <span class="text-xs text-slate-500 font-bold">mg/dL</span>
-                                            ${badgeHTML}
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-3xl text-purple-600 w-8 text-center"><i class="fa-solid fa-droplet"></i></div>
+                                        <div>
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-2xl font-bold text-slate-800">${log.val1}</span>
+                                                <span class="text-xs text-slate-500 font-bold">mg/dL</span>
+                                                ${badgeHTML}
+                                            </div>
+                                            <div class="text-xs text-slate-500 italic">${contextLabel}</div>
                                         </div>
-                                        <div class="text-xs text-slate-500 italic">${contextLabel}</div>
                                     </div>
-                                </div>
-                            `;
+                                `;
                         } else if (log.type === 'oxygen') {
                             typeClasses = 'border-oxygen bg-oxygen';
-                            
                             let status = 'ok';
                             if (log.val1 < 95) status = 'warn';
                             if (log.val1 < 90) status = 'alert';
-                            
+
                             const badgeClass = status === 'alert' ? 'val-alert' : (status === 'warn' ? 'val-warn' : 'val-ok');
                             badgeHTML = status !== 'ok' ? `<span class="val-badge ${badgeClass}">BASSA</span>` : `<span class="val-badge ${badgeClass}">OK</span>`;
 
                             contentHTML = `
-                                <div class="flex items-center gap-3">
-                                    <div class="text-3xl text-cyan-600 w-8 text-center"><i class="fa-solid fa-lungs"></i></div>
-                                    <div>
-                                        <div class="flex items-baseline gap-2">
-                                            <span class="text-2xl font-bold text-slate-800">${log.val1}%</span>
-                                            <span class="text-xs text-slate-500 font-bold">SpO2</span>
-                                            ${badgeHTML}
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-3xl text-cyan-600 w-8 text-center"><i class="fa-solid fa-lungs"></i></div>
+                                        <div>
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-2xl font-bold text-slate-800">${log.val1}%</span>
+                                                <span class="text-xs text-slate-500 font-bold">SpO2</span>
+                                                ${badgeHTML}
+                                            </div>
+                                            <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
                                         </div>
-                                        <div class="text-xs text-slate-500">Battiti: <b>${log.pulse || '-'}</b> bpm</div>
+                                    </div>
+                                `;
+                        } else if (log.type === 'temperature') {
+                            typeClasses = 'border-temperature bg-temperature';
+                            let status = 'ok';
+                            if (log.val1 > 38.0) status = 'alert';
+                            else if (log.val1 > 37.2) status = 'warn';
+
+                            const badgeClass = status === 'alert' ? 'val-alert' : (status === 'warn' ? 'val-warn' : 'val-ok');
+                            const badgeText = status === 'alert' ? 'FEBBRE' : (status === 'warn' ? 'ALTERATA' : 'OK');
+                            badgeHTML = `<span class="val-badge ${badgeClass}">${badgeText}</span>`;
+
+                            contentHTML = `
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-3xl text-amber-600 w-8 text-center"><i class="fa-solid fa-temperature-half"></i></div>
+                                        <div>
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-2xl font-bold text-slate-800">${log.val1}°</span>
+                                                <span class="text-xs text-slate-500 font-bold">C</span>
+                                                ${badgeHTML}
+                                            </div>
+                                            <div class="text-xs text-slate-500 italic">Temperatura corporea</div>
+                                        </div>
+                                    </div>
+                                `;
+                        }
+
+                        // AI BUTTON LOGIC
+                        let aiButton = '';
+                        if (log.aiResponse) {
+                            // Già analizzato -> Icona Report
+                            aiButton = `<button onclick="app.showAiResult('${log.id}')" class="text-purple-600 hover:text-purple-800 p-2" title="Vedi analisi"><i class="fa-solid fa-file-medical text-lg"></i></button>`;
+                        } else {
+                            // Da analizzare -> Icona Magia
+                            aiButton = `<button onclick="app.analyzeLog('${log.id}')" class="text-slate-300 hover:text-purple-600 p-2 transition-colors" title="Analizza con AI"><i class="fa-solid fa-wand-magic-sparkles"></i> <span class="text-[9px] font-bold">AI</span></button>`;
+                        }
+
+                        el.className = `measure-card ${typeClasses} p-3 rounded-xl card-shadow mb-3 flex items-center justify-between transition-all`;
+                        el.innerHTML = `
+                                <div class="flex-1">
+                                    ${contentHTML}
+                                    ${log.notes ? `<div class="mt-2 text-[11px] text-slate-400 border-t border-black/5 pt-1 truncate max-w-[200px]"><i class="fa-solid fa-note-sticky mr-1"></i> ${log.notes}</div>` : ''}
+                                </div>
+                                <div class="flex flex-col items-end gap-1 ml-2 border-l pl-2 border-slate-100">
+                                    <span class="text-[10px] font-bold text-slate-400 mb-1">${log.time}</span>
+                                    <div class="flex items-center gap-1">
+                                        ${aiButton}
+                                        <button onclick="app.editLog('${log.id}')" class="text-slate-300 hover:text-blue-500 p-2"><i class="fa-solid fa-pencil"></i></button>
+                                        <button onclick="app.deleteLog('${log.id}')" class="text-slate-300 hover:text-red-500 p-2"><i class="fa-solid fa-trash"></i></button>
                                     </div>
                                 </div>
                             `;
-                        }
-
-                        el.className = `measure-card ${typeClasses} p-3 rounded-xl card-shadow mb-3 flex items-center justify-between`;
-                        el.innerHTML = `
-                            <div class="flex-1">
-                                ${contentHTML}
-                                ${log.notes ? `<div class="mt-2 text-[11px] text-slate-400 border-t border-black/5 pt-1 truncate max-w-[200px]"><i class="fa-solid fa-note-sticky mr-1"></i> ${log.notes}</div>` : ''}
-                            </div>
-                            <div class="flex flex-col items-end gap-1 ml-2">
-                                <span class="text-[10px] font-bold text-slate-400 bg-white/60 px-1 rounded">${log.time}</span>
-                                <button onclick="app.deleteLog('${log.id}')" class="text-slate-300 hover:text-red-500 p-2"><i class="fa-solid fa-times"></i></button>
-                            </div>
-                        `;
                         container.appendChild(el);
                     });
                 }
@@ -710,44 +1216,103 @@
 
             prepareNewEntry() {
                 this.selectEntryType('pressure');
+                document.getElementById('modal-entry-title').textContent = "Nuova Misurazione";
+                document.getElementById('entry-edit-id').value = ""; // Reset edit ID
+
                 document.getElementById('input-sys').value = '';
                 document.getElementById('input-dia').value = '';
                 document.getElementById('input-pulse-p').value = '';
                 document.getElementById('input-glucose').value = '';
                 document.getElementById('input-spo2').value = '';
                 document.getElementById('input-pulse-o').value = '';
+                document.getElementById('input-temp').value = '';
                 document.getElementById('input-notes').value = '';
+
+                // Hide and clear AI response
+                document.getElementById('entry-ai-response-wrapper').classList.add('hidden');
+                document.getElementById('entry-ai-response-text').innerHTML = '';
+
+                // Scroll to top
+                document.getElementById('modal-entry-content').scrollTop = 0;
+
+                const now = new Date();
+                document.getElementById('entry-date').valueAsDate = now;
+                document.getElementById('entry-time').value = now.toTimeString().substring(0, 5);
+
                 this.showModal('modal-entry');
             },
 
             selectEntryType(type) {
                 this.currentEntryType = type;
-                
-                // UI Bottoni
                 document.querySelectorAll('.type-btn').forEach(btn => {
                     btn.classList.toggle('selected', btn.dataset.type === type);
                 });
-
-                // UI Campi
                 document.getElementById('fields-pressure').classList.add('hidden');
                 document.getElementById('fields-glucose').classList.add('hidden');
                 document.getElementById('fields-oxygen').classList.add('hidden');
-
+                document.getElementById('fields-temperature').classList.add('hidden');
                 document.getElementById(`fields-${type}`).classList.remove('hidden');
+            },
+
+            editLog(logId) {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                const log = profile.logs.find(l => l.id === logId);
+                if (!log) return;
+
+                document.getElementById('modal-entry-title').textContent = "Modifica Misurazione";
+                document.getElementById('entry-edit-id').value = logId;
+                document.getElementById('entry-date').value = log.date;
+                document.getElementById('entry-time').value = log.time;
+                document.getElementById('input-notes').value = log.notes || "";
+
+                // Scroll to top
+                document.getElementById('modal-entry-content').scrollTop = 0;
+
+                this.selectEntryType(log.type);
+
+                if (log.type === 'pressure') {
+                    document.getElementById('input-sys').value = log.val1;
+                    document.getElementById('input-dia').value = log.val2;
+                    document.getElementById('input-pulse-p').value = log.pulse;
+                } else if (log.type === 'glucose') {
+                    document.getElementById('input-glucose').value = log.val1;
+                    document.getElementById('input-glucose-context').value = log.context;
+                } else if (log.type === 'oxygen') {
+                    document.getElementById('input-spo2').value = log.val1;
+                    document.getElementById('input-pulse-o').value = log.pulse;
+                } else if (log.type === 'temperature') {
+                    document.getElementById('input-temp').value = log.val1;
+                }
+
+                // --- SHOW AI RESPONSE ---
+                const aiWrapper = document.getElementById('entry-ai-response-wrapper');
+                const aiText = document.getElementById('entry-ai-response-text');
+
+                if (log.aiResponse) {
+                    let formatted = log.aiResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    aiText.innerHTML = formatted;
+                    aiWrapper.classList.remove('hidden');
+                } else {
+                    aiWrapper.classList.add('hidden');
+                    aiText.innerHTML = '';
+                }
+
+                this.showModal('modal-entry');
             },
 
             saveEntry() {
                 const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
                 if (!profile) return;
 
+                const editId = document.getElementById('entry-edit-id').value;
                 const date = document.getElementById('entry-date').value;
                 const time = document.getElementById('entry-time').value;
                 const notes = document.getElementById('input-notes').value.trim();
 
                 if (!date || !time) return alert("Inserisci Data e Ora");
 
-                const entry = {
-                    id: this.generateId(),
+                // Costruiamo l'oggetto dati
+                let newData = {
                     type: this.currentEntryType,
                     date,
                     time,
@@ -762,31 +1327,50 @@
                     const sys = parseInt(document.getElementById('input-sys').value);
                     const dia = parseInt(document.getElementById('input-dia').value);
                     const pulse = parseInt(document.getElementById('input-pulse-p').value);
-                    
                     if (!sys || !dia) return alert("Inserisci i valori di pressione");
-                    entry.val1 = sys;
-                    entry.val2 = dia;
-                    entry.pulse = pulse;
-                } 
+                    newData.val1 = sys;
+                    newData.val2 = dia;
+                    newData.pulse = pulse;
+                }
                 else if (this.currentEntryType === 'glucose') {
                     const val = parseInt(document.getElementById('input-glucose').value);
                     const context = document.getElementById('input-glucose-context').value;
-                    
                     if (!val) return alert("Inserisci il valore glicemico");
-                    entry.val1 = val;
-                    entry.context = context;
+                    newData.val1 = val;
+                    newData.context = context;
                 }
                 else if (this.currentEntryType === 'oxygen') {
                     const spo2 = parseInt(document.getElementById('input-spo2').value);
                     const pulse = parseInt(document.getElementById('input-pulse-o').value);
-                    
                     if (!spo2) return alert("Inserisci la saturazione");
-                    entry.val1 = spo2;
-                    entry.pulse = pulse;
+                    newData.val1 = spo2;
+                    newData.pulse = pulse;
+                }
+                else if (this.currentEntryType === 'temperature') {
+                    const temp = parseFloat(document.getElementById('input-temp').value);
+                    if (!temp) return alert("Inserisci la temperatura");
+                    newData.val1 = temp;
                 }
 
-                if (!profile.logs) profile.logs = [];
-                profile.logs.push(entry);
+                if (editId) {
+                    // MODIFICA
+                    const logIndex = profile.logs.findIndex(l => l.id === editId);
+                    if (logIndex > -1) {
+                        // Mantieni ID e eventuale risposta AI precedente (se i valori cambiano drasticamente, l'AI potrebbe non essere più valida, ma per ora la teniamo o la resettiamo?)
+                        // Decido di resettare l'AI se modifico i valori, perché l'analisi sarebbe vecchia.
+                        profile.logs[logIndex] = {
+                            ...profile.logs[logIndex],
+                            ...newData,
+                            aiResponse: null // Reset AI dopo modifica
+                        };
+                    }
+                } else {
+                    // NUOVO
+                    newData.id = this.generateId();
+                    newData.aiResponse = null;
+                    if (!profile.logs) profile.logs = [];
+                    profile.logs.push(newData);
+                }
 
                 this.saveData();
                 this.closeModal('modal-entry');
@@ -794,11 +1378,247 @@
             },
 
             deleteLog(id) {
-                if(confirm("Eliminare questa misurazione?")) {
-                    const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
-                    profile.logs = profile.logs.filter(l => l.id !== id);
+                this.askConfirm(
+                    "Elimina Misurazione",
+                    "Sei sicuro di voler eliminare questa misurazione?",
+                    () => {
+                        const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                        profile.logs = profile.logs.filter(l => l.id !== id);
+                        this.saveData();
+                        this.renderDashboard();
+                    }
+                );
+            },
+
+            // --- CHART LOGIC ---
+
+            openCharts() {
+                this.currentProfileId = this.currentProfileId; // Ensure context
+                document.getElementById('view-profiles').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-charts').classList.remove('hidden');
+                document.getElementById('btn-back').classList.remove('hidden');
+
+                // Default chart
+                this.renderChart('pressure');
+            },
+
+            renderChart(type) {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!profile) return;
+
+                // Update selected button style
+                document.querySelectorAll('.chart-btn').forEach(btn => {
+                    if (btn.dataset.chart === type) btn.classList.add('bg-slate-100', 'text-slate-800');
+                    else btn.classList.remove('bg-slate-100', 'text-slate-800');
+                });
+
+                // Filter data
+                // Sort ascending for chart
+                const logs = [...profile.logs]
+                    .filter(l => l.type === type)
+                    .sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
+
+                if (logs.length === 0) {
+                    if (this.currentChart) this.currentChart.destroy();
+                    document.getElementById('chart-empty-msg').classList.remove('hidden');
+                    return;
+                } else {
+                    document.getElementById('chart-empty-msg').classList.add('hidden');
+                }
+
+                // Prepare Data Arrays
+                const labels = logs.map(l => {
+                    const d = new Date(l.date);
+                    return `${d.getDate()}/${d.getMonth() + 1}`;
+                });
+
+                // Determine Datasets
+                let datasets = [];
+                let yAxisLabel = '';
+
+                if (type === 'pressure') {
+                    datasets = [
+                        {
+                            label: 'Massima (SYS)',
+                            data: logs.map(l => l.val1),
+                            borderColor: '#e11d48', // rose-600
+                            backgroundColor: '#e11d48',
+                            tension: 0.3
+                        },
+                        {
+                            label: 'Minima (DIA)',
+                            data: logs.map(l => l.val2),
+                            borderColor: '#0ea5e9', // sky-500
+                            backgroundColor: '#0ea5e9',
+                            tension: 0.3
+                        }
+                    ];
+                    yAxisLabel = 'mmHg';
+                } else if (type === 'glucose') {
+                    datasets = [{
+                        label: 'Glicemia',
+                        data: logs.map(l => l.val1),
+                        borderColor: '#9333ea', // purple-600
+                        backgroundColor: '#9333ea',
+                        tension: 0.3
+                    }];
+                    yAxisLabel = 'mg/dL';
+                } else if (type === 'oxygen') {
+                    datasets = [{
+                        label: 'Saturazione',
+                        data: logs.map(l => l.val1),
+                        borderColor: '#0891b2', // cyan-600
+                        backgroundColor: '#0891b2',
+                        tension: 0.3
+                    }];
+                    yAxisLabel = '%';
+                } else if (type === 'temperature') {
+                    datasets = [{
+                        label: 'Temperatura',
+                        data: logs.map(l => l.val1),
+                        borderColor: '#f59e0b', // amber-500
+                        backgroundColor: '#f59e0b',
+                        tension: 0.3
+                    }];
+                    yAxisLabel = '°C';
+                }
+
+                // Destroy old chart if exists
+                if (this.currentChart) {
+                    this.currentChart.destroy();
+                }
+
+                // Create Chart
+                const ctx = document.getElementById('trend-chart').getContext('2d');
+                this.currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { size: 10, family: "'Inter', sans-serif" } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    afterLabel: function (context) {
+                                        // Show Pulse if available (custom logic)
+                                        const idx = context.dataIndex;
+                                        if (logs[idx].pulse) return `Battiti: ${logs[idx].pulse} bpm`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: { display: true, text: yAxisLabel },
+                                grid: { color: '#f1f5f9' }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            },
+
+            // --- AI FEATURES ---
+
+            async analyzeLog(logId) {
+                if (!this.data.apiKey) {
+                    this.showModal('modal-no-api');
+                    return;
+                }
+
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                const log = profile.logs.find(l => l.id === logId);
+                if (!log) return;
+
+                // Mostra Loading
+                const loadingOverlay = document.getElementById('loading-overlay');
+                loadingOverlay.style.display = 'flex';
+
+                // Costruzione Prompt
+                const info = profile.info;
+                let patientDesc = `Paziente di nome ${profile.name}.`;
+
+                // Usa l'età calcolata se disponibile
+                if (info.dob) {
+                    const calculatedAge = this.getAge(info.dob);
+                    patientDesc += ` Età: ${calculatedAge} anni.`;
+                } else if (info.age) {
+                    patientDesc += ` Età: ${info.age} anni.`;
+                }
+
+                if (info.weight) patientDesc += ` Peso: ${info.weight} kg.`;
+                if (info.pathologies) patientDesc += ` Patologie note: ${info.pathologies}.`;
+
+                let valDesc = "";
+                if (log.type === 'pressure') valDesc = `Pressione Arteriosa: ${log.val1}/${log.val2} mmHg. Battito: ${log.pulse} bpm.`;
+                else if (log.type === 'glucose') valDesc = `Glicemia: ${log.val1} mg/dL (Misurata: ${log.context}).`;
+                else if (log.type === 'oxygen') valDesc = `Saturazione Ossigeno (SpO2): ${log.val1}%. Battito: ${log.pulse} bpm.`;
+                else if (log.type === 'temperature') valDesc = `Temperatura Corporea: ${log.val1} °C.`;
+
+                const prompt = `Sei un assistente medico virtuale. Analizza questi dati vitali.
+                    ${patientDesc}
+                    Dato rilevato: ${valDesc}
+
+                    Rispondi in italiano, in modo breve e diretto (massimo 3-4 frasi).
+                    1. Indica se il valore è normale, alto o basso considerando i dati del paziente.
+                    2. Dai un breve consiglio pratico.
+                    Usa un tono rassicurante ma professionale. Non dire "sono un'intelligenza artificiale".`;
+
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${this.data.apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: prompt }] }]
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) {
+                        throw new Error(data.error.message);
+                    }
+
+                    const aiText = data.candidates[0].content.parts[0].text;
+
+                    // Salva Risultato
+                    log.aiResponse = aiText;
                     this.saveData();
-                    this.renderDashboard();
+                    this.renderDashboard(); // Ricarica per mostrare l'icona nuova
+
+                    // Apri risultato
+                    this.showAiResult(logId);
+
+                } catch (error) {
+                    console.error(error);
+                    alert("Errore AI: " + error.message);
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            },
+
+            showAiResult(logId) {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                const log = profile.logs.find(l => l.id === logId);
+                if (log && log.aiResponse) {
+                    // Formattazione base per il testo (es. grassetto markdown)
+                    let formatted = log.aiResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    document.getElementById('ai-result-content').innerHTML = formatted;
+                    this.showModal('modal-ai-result');
                 }
             },
 
@@ -809,22 +1629,26 @@
             exportProfileTxt() {
                 const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
                 if (!profile) return;
-                
+
                 let content = `REPORT SALUTE: ${profile.name.toUpperCase()}\n`;
+                if (profile.info.dob) content += `Nato il: ${new Date(profile.info.dob).toLocaleDateString()} (${this.getAge(profile.info.dob)} anni) | `;
+                else if (profile.info.age) content += `Età: ${profile.info.age} | `;
+
+                content += `Peso: ${profile.info.weight} | Note: ${profile.info.pathologies}\n`;
                 content += `Generato il: ${new Date().toLocaleDateString('it-IT')}\n`;
                 content += `--------------------------------------------------\n\n`;
 
-                // Ordina per data
-                const logs = [...profile.logs].sort((a,b) => new Date(a.date+'T'+a.time) - new Date(b.date+'T'+b.time));
+                const logs = [...profile.logs].sort((a, b) => new Date(a.date + 'T' + a.time) - new Date(b.date + 'T' + b.time));
 
                 logs.forEach(l => {
                     content += `[${l.date} ${l.time}] `;
-                    if(l.type === 'pressure') content += `PRESSIONE: ${l.val1}/${l.val2} mmHg`;
-                    if(l.type === 'glucose') content += `GLICEMIA: ${l.val1} mg/dL (${l.context})`;
-                    if(l.type === 'oxygen') content += `SATURAZIONE: ${l.val1}% SpO2`;
-                    
-                    if(l.pulse) content += ` | Puls: ${l.pulse}`;
-                    if(l.notes) content += ` | Note: ${l.notes}`;
+                    if (l.type === 'pressure') content += `PRESSIONE: ${l.val1}/${l.val2} mmHg`;
+                    if (l.type === 'glucose') content += `GLICEMIA: ${l.val1} mg/dL (${l.context})`;
+                    if (l.type === 'oxygen') content += `SATURAZIONE: ${l.val1}% SpO2`;
+                    if (l.type === 'temperature') content += `TEMPERATURA: ${l.val1}°C`;
+
+                    if (l.pulse) content += ` | Puls: ${l.pulse}`;
+                    if (l.aiResponse) content += `\n   -> Analisi AI: ${l.aiResponse}`;
                     content += `\n`;
                 });
 
@@ -837,7 +1661,9 @@
             },
 
             exportData() {
-                const blob = new Blob([JSON.stringify(this.data, null, 2)], { type: "application/json" });
+                const safeData = JSON.parse(JSON.stringify(this.data));
+                safeData.apiKey = ""; // Rimuovo chiave per sicurezza nell'export
+                const blob = new Blob([JSON.stringify(safeData, null, 2)], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -854,7 +1680,11 @@
                     try {
                         const json = JSON.parse(e.target.result);
                         if (json && Array.isArray(json.profiles)) {
+                            // Mantieni la key esistente se l'import non ce l'ha
+                            const currentKey = this.data.apiKey;
                             this.data = json;
+                            if (!this.data.apiKey) this.data.apiKey = currentKey;
+
                             this.saveData();
                             this.goBack();
                             alert("Dati importati con successo!");
@@ -866,11 +1696,15 @@
             },
 
             resetAllData() {
-                if (confirm("Attenzione: perderai tutti i profili e le misurazioni. Continuare?")) {
-                    this.data = { profiles: [] };
-                    this.saveData();
-                    this.goBack();
-                }
+                this.askConfirm(
+                    "Reset Dati",
+                    "Attenzione: perderai tutti i profili e le misurazioni salvate. Continuare?",
+                    () => {
+                        this.data = { profiles: [], apiKey: "" };
+                        this.saveData();
+                        this.goBack();
+                    }
+                );
             },
 
             setupManifest() {
@@ -881,7 +1715,7 @@
                     "display": "standalone",
                     "background_color": "#fdf2f8",
                     "theme_color": "#ec4899",
-                    "icons": [{ "src": "https://img.icons8.com/color/192/heart-monitor.png", "sizes": "192x192", "type": "image/png" }]
+                    "icons": [{ "src": "https://i.ibb.co/Ng66B9jY/medical-report.png", "sizes": "192x192", "type": "image/png" }]
                 };
                 const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
                 document.getElementById('my-manifest').setAttribute('href', URL.createObjectURL(blob));
