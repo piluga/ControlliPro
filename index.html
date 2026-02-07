@@ -1065,6 +1065,187 @@
                 this.closeModal('modal-edit-info');
             },
 
+            // --- ENTRY LOGIC ---
+
+            prepareNewEntry() {
+                this.selectEntryType('pressure');
+                document.getElementById('modal-entry-title').textContent = "Nuova Misurazione";
+                document.getElementById('entry-edit-id').value = ""; // Reset edit ID
+                
+                document.getElementById('input-sys').value = '';
+                document.getElementById('input-dia').value = '';
+                document.getElementById('input-pulse-p').value = '';
+                document.getElementById('input-glucose').value = '';
+                document.getElementById('input-spo2').value = '';
+                document.getElementById('input-pulse-o').value = '';
+                document.getElementById('input-temp').value = '';
+                document.getElementById('input-notes').value = '';
+                
+                // Hide and clear AI response
+                document.getElementById('entry-ai-response-wrapper').classList.add('hidden');
+                document.getElementById('entry-ai-response-text').innerHTML = '';
+
+                // Scroll to top
+                document.getElementById('modal-entry-content').scrollTop = 0;
+
+                const now = new Date();
+                document.getElementById('entry-date').valueAsDate = now;
+                document.getElementById('entry-time').value = now.toTimeString().substring(0,5);
+                
+                this.showModal('modal-entry');
+            },
+
+            selectEntryType(type) {
+                this.currentEntryType = type;
+                document.querySelectorAll('.type-btn').forEach(btn => {
+                    btn.classList.toggle('selected', btn.dataset.type === type);
+                });
+                document.getElementById('fields-pressure').classList.add('hidden');
+                document.getElementById('fields-glucose').classList.add('hidden');
+                document.getElementById('fields-oxygen').classList.add('hidden');
+                document.getElementById('fields-temperature').classList.add('hidden');
+                document.getElementById(`fields-${type}`).classList.remove('hidden');
+            },
+
+            editLog(logId) {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                const log = profile.logs.find(l => l.id === logId);
+                if(!log) return;
+
+                document.getElementById('modal-entry-title').textContent = "Modifica Misurazione";
+                document.getElementById('entry-edit-id').value = logId;
+                document.getElementById('entry-date').value = log.date;
+                document.getElementById('entry-time').value = log.time;
+                document.getElementById('input-notes').value = log.notes || "";
+                
+                // Scroll to top
+                document.getElementById('modal-entry-content').scrollTop = 0;
+
+                this.selectEntryType(log.type);
+
+                if (log.type === 'pressure') {
+                    document.getElementById('input-sys').value = log.val1;
+                    document.getElementById('input-dia').value = log.val2;
+                    document.getElementById('input-pulse-p').value = log.pulse;
+                } else if (log.type === 'glucose') {
+                    document.getElementById('input-glucose').value = log.val1;
+                    document.getElementById('input-glucose-context').value = log.context;
+                } else if (log.type === 'oxygen') {
+                    document.getElementById('input-spo2').value = log.val1;
+                    document.getElementById('input-pulse-o').value = log.pulse;
+                } else if (log.type === 'temperature') {
+                    document.getElementById('input-temp').value = log.val1;
+                }
+                
+                // --- SHOW AI RESPONSE ---
+                const aiWrapper = document.getElementById('entry-ai-response-wrapper');
+                const aiText = document.getElementById('entry-ai-response-text');
+
+                if (log.aiResponse) {
+                    let formatted = log.aiResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+                    aiText.innerHTML = formatted;
+                    aiWrapper.classList.remove('hidden');
+                } else {
+                    aiWrapper.classList.add('hidden');
+                    aiText.innerHTML = '';
+                }
+
+                this.showModal('modal-entry');
+            },
+
+            saveEntry() {
+                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                if (!profile) return;
+
+                const editId = document.getElementById('entry-edit-id').value;
+                const date = document.getElementById('entry-date').value;
+                const time = document.getElementById('entry-time').value;
+                const notes = document.getElementById('input-notes').value.trim();
+
+                if (!date || !time) return alert("Inserisci Data e Ora");
+
+                // Costruiamo l'oggetto dati
+                let newData = {
+                    type: this.currentEntryType,
+                    date,
+                    time,
+                    notes,
+                    val1: null,
+                    val2: null,
+                    pulse: null,
+                    context: null
+                };
+
+                if (this.currentEntryType === 'pressure') {
+                    const sys = parseInt(document.getElementById('input-sys').value);
+                    const dia = parseInt(document.getElementById('input-dia').value);
+                    const pulse = parseInt(document.getElementById('input-pulse-p').value);
+                    if (!sys || !dia) return alert("Inserisci i valori di pressione");
+                    newData.val1 = sys;
+                    newData.val2 = dia;
+                    newData.pulse = pulse;
+                } 
+                else if (this.currentEntryType === 'glucose') {
+                    const val = parseInt(document.getElementById('input-glucose').value);
+                    const context = document.getElementById('input-glucose-context').value;
+                    if (!val) return alert("Inserisci il valore glicemico");
+                    newData.val1 = val;
+                    newData.context = context;
+                }
+                else if (this.currentEntryType === 'oxygen') {
+                    const spo2 = parseInt(document.getElementById('input-spo2').value);
+                    const pulse = parseInt(document.getElementById('input-pulse-o').value);
+                    if (!spo2) return alert("Inserisci la saturazione");
+                    newData.val1 = spo2;
+                    newData.pulse = pulse;
+                }
+                else if (this.currentEntryType === 'temperature') {
+                    const temp = parseFloat(document.getElementById('input-temp').value);
+                    if (!temp) return alert("Inserisci la temperatura");
+                    newData.val1 = temp;
+                }
+
+                if (editId) {
+                    // MODIFICA
+                    const logIndex = profile.logs.findIndex(l => l.id === editId);
+                    if (logIndex > -1) {
+                        // Mantieni ID e eventuale risposta AI precedente (se i valori cambiano drasticamente, l'AI potrebbe non essere più valida, ma per ora la teniamo o la resettiamo?)
+                        // Decido di resettare l'AI se modifico i valori, perché l'analisi sarebbe vecchia.
+                        profile.logs[logIndex] = { 
+                            ...profile.logs[logIndex], 
+                            ...newData, 
+                            aiResponse: null // Reset AI dopo modifica
+                        };
+                    }
+                } else {
+                    // NUOVO
+                    newData.id = this.generateId();
+                    newData.aiResponse = null;
+                    if (!profile.logs) profile.logs = [];
+                    profile.logs.push(newData);
+                    
+                    // Apri automaticamente l'accordion della nuova categoria
+                    this.openCategories[this.currentEntryType] = true;
+                }
+
+                this.saveData();
+                this.closeModal('modal-entry');
+                this.renderDashboard();
+            },
+
+            deleteLog(id) {
+                this.askConfirm(
+                    "Elimina Misurazione",
+                    "Sei sicuro di voler eliminare questa misurazione?",
+                    () => {
+                        const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
+                        profile.logs = profile.logs.filter(l => l.id !== id);
+                        this.saveData();
+                        this.renderDashboard();
+                    }
+                );
+            },
+
             // --- DASHBOARD LOGIC ---
 
             toggleCategory(type) {
