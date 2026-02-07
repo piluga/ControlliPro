@@ -257,13 +257,10 @@
                     <span class="font-bold">Filtra:</span>
                 </div>
                 <div class="flex gap-2 w-full">
-                    <select id="filter-type-input" onchange="app.setFilterType(this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-600 outline-none focus:border-pink-300">
-                        <option value="all">Tutti i tipi</option>
-                        <option value="pressure">Pressione</option>
-                        <option value="glucose">Glicemia</option>
-                        <option value="oxygen">Saturazione</option>
-                        <option value="temperature">Temperatura</option>
-                    </select>
+                    <button id="btn-filter-type" onclick="app.openFilterTypeModal()" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-600 font-medium flex items-center justify-between hover:bg-slate-100 transition-colors">
+                        <span id="filter-type-label">Tutti i tipi</span>
+                        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
+                    </button>
                     <input type="date" id="filter-date-input" onchange="app.setFilterDate(this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-600 outline-none focus:border-pink-300">
                     <button onclick="app.clearFilters()" class="text-xs font-bold text-slate-400 hover:text-slate-600 px-3 py-2 bg-slate-100 rounded-lg transition-colors" title="Rimuovi tutti i filtri">
                         <i class="fa-solid fa-times"></i>
@@ -492,6 +489,36 @@
                     Chiudi
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- Modale Filtro Tipo -->
+    <div id="modal-filter-type" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-5 fade-in">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Filtra per Tipo</h3>
+            <div class="space-y-2">
+                <button onclick="app.setFilterType('all')" class="w-full p-3 rounded-xl border border-slate-100 flex items-center gap-3 hover:bg-slate-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center"><i class="fa-solid fa-list"></i></div>
+                    <span class="font-bold text-sm text-slate-600">Tutti i tipi</span>
+                </button>
+                <button onclick="app.setFilterType('pressure')" class="w-full p-3 rounded-xl border border-rose-100 flex items-center gap-3 hover:bg-rose-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center"><i class="fa-solid fa-heart-pulse"></i></div>
+                    <span class="font-bold text-sm text-slate-600">Pressione</span>
+                </button>
+                <button onclick="app.setFilterType('glucose')" class="w-full p-3 rounded-xl border border-purple-100 flex items-center gap-3 hover:bg-purple-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center"><i class="fa-solid fa-droplet"></i></div>
+                    <span class="font-bold text-sm text-slate-600">Glicemia</span>
+                </button>
+                <button onclick="app.setFilterType('oxygen')" class="w-full p-3 rounded-xl border border-cyan-100 flex items-center gap-3 hover:bg-cyan-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center"><i class="fa-solid fa-lungs"></i></div>
+                    <span class="font-bold text-sm text-slate-600">Saturazione</span>
+                </button>
+                <button onclick="app.setFilterType('temperature')" class="w-full p-3 rounded-xl border border-amber-100 flex items-center gap-3 hover:bg-amber-50 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-temperature-half"></i></div>
+                    <span class="font-bold text-sm text-slate-600">Temperatura</span>
+                </button>
+            </div>
+            <button onclick="app.closeModal('modal-filter-type')" class="w-full mt-4 py-2 text-slate-400 text-sm font-bold hover:text-slate-600 transition-colors">Annulla</button>
         </div>
     </div>
 
@@ -799,7 +826,8 @@
                 
                 // Clear filter input UI when opening profile
                 document.getElementById('filter-date-input').value = '';
-                document.getElementById('filter-type-input').value = 'all';
+                // Reset to 'all' via UI update logic
+                document.getElementById('filter-type-label').innerText = 'Tutti i tipi';
                 this.filterDate = null;
                 this.filterType = 'all';
 
@@ -826,6 +854,41 @@
             goToSettingsFromModal() {
                 this.closeModal('modal-no-api');
                 this.showSettings();
+            },
+
+            // --- FILTERS ---
+            openFilterTypeModal() {
+                this.showModal('modal-filter-type');
+            },
+
+            setFilterType(type) {
+                this.filterType = type;
+                
+                // Update button label
+                const labels = {
+                    'all': 'Tutti i tipi',
+                    'pressure': 'Pressione',
+                    'glucose': 'Glicemia',
+                    'oxygen': 'Saturazione',
+                    'temperature': 'Temperatura'
+                };
+                document.getElementById('filter-type-label').innerText = labels[type] || 'Tutti i tipi';
+                
+                this.closeModal('modal-filter-type');
+                this.renderDashboard();
+            },
+
+            setFilterDate(date) {
+                this.filterDate = date;
+                this.renderDashboard();
+            },
+
+            clearFilters() {
+                this.filterDate = null;
+                this.filterType = 'all';
+                document.getElementById('filter-date-input').value = '';
+                document.getElementById('filter-type-label').innerText = 'Tutti i tipi';
+                this.renderDashboard();
             },
 
             // --- PROFILES ---
@@ -1007,24 +1070,6 @@
             toggleCategory(type) {
                 this.openCategories[type] = !this.openCategories[type];
                 this.renderDashboard(); // Ricarica la vista per aggiornare l'accordion
-            },
-
-            setFilterDate(date) {
-                this.filterDate = date;
-                this.renderDashboard();
-            },
-
-            setFilterType(type) {
-                this.filterType = type;
-                this.renderDashboard();
-            },
-
-            clearFilters() {
-                this.filterDate = null;
-                this.filterType = 'all';
-                document.getElementById('filter-date-input').value = '';
-                document.getElementById('filter-type-input').value = 'all';
-                this.renderDashboard();
             },
 
             renderDashboard() {
@@ -1283,187 +1328,6 @@
                     </div>
                 `;
                 return el;
-            },
-
-            // --- ENTRY LOGIC ---
-
-            prepareNewEntry() {
-                this.selectEntryType('pressure');
-                document.getElementById('modal-entry-title').textContent = "Nuova Misurazione";
-                document.getElementById('entry-edit-id').value = ""; // Reset edit ID
-                
-                document.getElementById('input-sys').value = '';
-                document.getElementById('input-dia').value = '';
-                document.getElementById('input-pulse-p').value = '';
-                document.getElementById('input-glucose').value = '';
-                document.getElementById('input-spo2').value = '';
-                document.getElementById('input-pulse-o').value = '';
-                document.getElementById('input-temp').value = '';
-                document.getElementById('input-notes').value = '';
-                
-                // Hide and clear AI response
-                document.getElementById('entry-ai-response-wrapper').classList.add('hidden');
-                document.getElementById('entry-ai-response-text').innerHTML = '';
-
-                // Scroll to top
-                document.getElementById('modal-entry-content').scrollTop = 0;
-
-                const now = new Date();
-                document.getElementById('entry-date').valueAsDate = now;
-                document.getElementById('entry-time').value = now.toTimeString().substring(0,5);
-                
-                this.showModal('modal-entry');
-            },
-
-            selectEntryType(type) {
-                this.currentEntryType = type;
-                document.querySelectorAll('.type-btn').forEach(btn => {
-                    btn.classList.toggle('selected', btn.dataset.type === type);
-                });
-                document.getElementById('fields-pressure').classList.add('hidden');
-                document.getElementById('fields-glucose').classList.add('hidden');
-                document.getElementById('fields-oxygen').classList.add('hidden');
-                document.getElementById('fields-temperature').classList.add('hidden');
-                document.getElementById(`fields-${type}`).classList.remove('hidden');
-            },
-
-            editLog(logId) {
-                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
-                const log = profile.logs.find(l => l.id === logId);
-                if(!log) return;
-
-                document.getElementById('modal-entry-title').textContent = "Modifica Misurazione";
-                document.getElementById('entry-edit-id').value = logId;
-                document.getElementById('entry-date').value = log.date;
-                document.getElementById('entry-time').value = log.time;
-                document.getElementById('input-notes').value = log.notes || "";
-                
-                // Scroll to top
-                document.getElementById('modal-entry-content').scrollTop = 0;
-
-                this.selectEntryType(log.type);
-
-                if (log.type === 'pressure') {
-                    document.getElementById('input-sys').value = log.val1;
-                    document.getElementById('input-dia').value = log.val2;
-                    document.getElementById('input-pulse-p').value = log.pulse;
-                } else if (log.type === 'glucose') {
-                    document.getElementById('input-glucose').value = log.val1;
-                    document.getElementById('input-glucose-context').value = log.context;
-                } else if (log.type === 'oxygen') {
-                    document.getElementById('input-spo2').value = log.val1;
-                    document.getElementById('input-pulse-o').value = log.pulse;
-                } else if (log.type === 'temperature') {
-                    document.getElementById('input-temp').value = log.val1;
-                }
-                
-                // --- SHOW AI RESPONSE ---
-                const aiWrapper = document.getElementById('entry-ai-response-wrapper');
-                const aiText = document.getElementById('entry-ai-response-text');
-
-                if (log.aiResponse) {
-                    let formatted = log.aiResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-                    aiText.innerHTML = formatted;
-                    aiWrapper.classList.remove('hidden');
-                } else {
-                    aiWrapper.classList.add('hidden');
-                    aiText.innerHTML = '';
-                }
-
-                this.showModal('modal-entry');
-            },
-
-            saveEntry() {
-                const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
-                if (!profile) return;
-
-                const editId = document.getElementById('entry-edit-id').value;
-                const date = document.getElementById('entry-date').value;
-                const time = document.getElementById('entry-time').value;
-                const notes = document.getElementById('input-notes').value.trim();
-
-                if (!date || !time) return alert("Inserisci Data e Ora");
-
-                // Costruiamo l'oggetto dati
-                let newData = {
-                    type: this.currentEntryType,
-                    date,
-                    time,
-                    notes,
-                    val1: null,
-                    val2: null,
-                    pulse: null,
-                    context: null
-                };
-
-                if (this.currentEntryType === 'pressure') {
-                    const sys = parseInt(document.getElementById('input-sys').value);
-                    const dia = parseInt(document.getElementById('input-dia').value);
-                    const pulse = parseInt(document.getElementById('input-pulse-p').value);
-                    if (!sys || !dia) return alert("Inserisci i valori di pressione");
-                    newData.val1 = sys;
-                    newData.val2 = dia;
-                    newData.pulse = pulse;
-                } 
-                else if (this.currentEntryType === 'glucose') {
-                    const val = parseInt(document.getElementById('input-glucose').value);
-                    const context = document.getElementById('input-glucose-context').value;
-                    if (!val) return alert("Inserisci il valore glicemico");
-                    newData.val1 = val;
-                    newData.context = context;
-                }
-                else if (this.currentEntryType === 'oxygen') {
-                    const spo2 = parseInt(document.getElementById('input-spo2').value);
-                    const pulse = parseInt(document.getElementById('input-pulse-o').value);
-                    if (!spo2) return alert("Inserisci la saturazione");
-                    newData.val1 = spo2;
-                    newData.pulse = pulse;
-                }
-                else if (this.currentEntryType === 'temperature') {
-                    const temp = parseFloat(document.getElementById('input-temp').value);
-                    if (!temp) return alert("Inserisci la temperatura");
-                    newData.val1 = temp;
-                }
-
-                if (editId) {
-                    // MODIFICA
-                    const logIndex = profile.logs.findIndex(l => l.id === editId);
-                    if (logIndex > -1) {
-                        // Mantieni ID e eventuale risposta AI precedente (se i valori cambiano drasticamente, l'AI potrebbe non essere più valida, ma per ora la teniamo o la resettiamo?)
-                        // Decido di resettare l'AI se modifico i valori, perché l'analisi sarebbe vecchia.
-                        profile.logs[logIndex] = { 
-                            ...profile.logs[logIndex], 
-                            ...newData, 
-                            aiResponse: null // Reset AI dopo modifica
-                        };
-                    }
-                } else {
-                    // NUOVO
-                    newData.id = this.generateId();
-                    newData.aiResponse = null;
-                    if (!profile.logs) profile.logs = [];
-                    profile.logs.push(newData);
-                    
-                    // Apri automaticamente l'accordion della nuova categoria
-                    this.openCategories[this.currentEntryType] = true;
-                }
-
-                this.saveData();
-                this.closeModal('modal-entry');
-                this.renderDashboard();
-            },
-
-            deleteLog(id) {
-                this.askConfirm(
-                    "Elimina Misurazione",
-                    "Sei sicuro di voler eliminare questa misurazione?",
-                    () => {
-                        const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
-                        profile.logs = profile.logs.filter(l => l.id !== id);
-                        this.saveData();
-                        this.renderDashboard();
-                    }
-                );
             },
 
             // --- CHART LOGIC ---
