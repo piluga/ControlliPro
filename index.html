@@ -250,6 +250,27 @@
                 </div>
             </div>
 
+            <!-- FILTRO DATA E TIPO -->
+            <div class="flex flex-col gap-2 mb-4 bg-white p-3 rounded-xl card-shadow border border-slate-100">
+                <div class="flex items-center gap-2 text-sm text-slate-500 mb-1">
+                    <i class="fa-solid fa-filter text-pink-500"></i>
+                    <span class="font-bold">Filtra:</span>
+                </div>
+                <div class="flex gap-2 w-full">
+                    <select id="filter-type-input" onchange="app.setFilterType(this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-600 outline-none focus:border-pink-300">
+                        <option value="all">Tutti i tipi</option>
+                        <option value="pressure">Pressione</option>
+                        <option value="glucose">Glicemia</option>
+                        <option value="oxygen">Saturazione</option>
+                        <option value="temperature">Temperatura</option>
+                    </select>
+                    <input type="date" id="filter-date-input" onchange="app.setFilterDate(this.value)" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-600 outline-none focus:border-pink-300">
+                    <button onclick="app.clearFilters()" class="text-xs font-bold text-slate-400 hover:text-slate-600 px-3 py-2 bg-slate-100 rounded-lg transition-colors" title="Rimuovi tutti i filtri">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
             <!-- Lista Misurazioni Raggruppata per Categoria (Accordion) -->
             <div id="logs-list" class="space-y-4"></div>
 
@@ -634,6 +655,10 @@
                 temperature: false
             },
 
+            // Filtro Data e Tipo
+            filterDate: null,
+            filterType: 'all',
+
             // 🎨 TEMI DI COLORE
             profileThemes: [
                 { bg: 'bg-pink-50', border: 'border-pink-200', iconBg: 'bg-pink-100', iconText: 'text-pink-600' },
@@ -755,6 +780,8 @@
             // --- NAVIGATION ---
             goBack() {
                 this.currentProfileId = null;
+                this.filterDate = null; // Reset filter on exit
+                this.filterType = 'all'; // Reset filter on exit
                 document.getElementById('view-profiles').classList.remove('hidden');
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-settings').classList.add('hidden');
@@ -769,6 +796,13 @@
                 document.getElementById('view-dashboard').classList.remove('hidden');
                 document.getElementById('view-charts').classList.add('hidden');
                 document.getElementById('btn-back').classList.remove('hidden');
+                
+                // Clear filter input UI when opening profile
+                document.getElementById('filter-date-input').value = '';
+                document.getElementById('filter-type-input').value = 'all';
+                this.filterDate = null;
+                this.filterType = 'all';
+
                 this.renderDashboard();
             },
 
@@ -975,6 +1009,24 @@
                 this.renderDashboard(); // Ricarica la vista per aggiornare l'accordion
             },
 
+            setFilterDate(date) {
+                this.filterDate = date;
+                this.renderDashboard();
+            },
+
+            setFilterType(type) {
+                this.filterType = type;
+                this.renderDashboard();
+            },
+
+            clearFilters() {
+                this.filterDate = null;
+                this.filterType = 'all';
+                document.getElementById('filter-date-input').value = '';
+                document.getElementById('filter-type-input').value = 'all';
+                this.renderDashboard();
+            },
+
             renderDashboard() {
                 const profile = this.data.profiles.find(x => x.id === this.currentProfileId);
                 if (!profile) return;
@@ -1011,7 +1063,7 @@
                     `;
                 }
 
-                // Ordina logs globalmente per data (per le statistiche veloci)
+                // Ordina logs globalmente per data
                 if(!profile.logs) profile.logs = [];
                 profile.logs.sort((a,b) => {
                     const da = new Date(a.date + 'T' + a.time);
@@ -1019,7 +1071,7 @@
                     return db - da;
                 });
 
-                // Stats Veloci (Ultimo valore inserito per tipo)
+                // Stats Veloci (Basate sugli ultimi valori assoluti, indipendentemente dal filtro)
                 const lastPress = profile.logs.find(l => l.type === 'pressure');
                 const lastGluc = profile.logs.find(l => l.type === 'glucose');
                 const lastOxy = profile.logs.find(l => l.type === 'oxygen');
@@ -1030,12 +1082,30 @@
                 document.getElementById('stat-oxygen').innerHTML = lastOxy ? `${lastOxy.val1}%` : '-';
                 document.getElementById('stat-temperature').innerHTML = lastTemp ? `${lastTemp.val1}°` : '-';
 
+                // --- FILTRAGGIO LOGS PER LISTA ---
+                let displayLogs = [...profile.logs];
+                
+                // Filtra per Data
+                if (this.filterDate) {
+                    displayLogs = displayLogs.filter(l => l.date === this.filterDate);
+                }
+
+                // Filtra per Tipo
+                if (this.filterType && this.filterType !== 'all') {
+                    displayLogs = displayLogs.filter(l => l.type === this.filterType);
+                }
+
                 // --- LOGICA ACCORDION ---
                 const container = document.getElementById('logs-list');
                 container.innerHTML = '';
                 
-                if (profile.logs.length === 0) {
-                    document.getElementById('logs-empty-state').classList.remove('hidden');
+                if (displayLogs.length === 0) {
+                    if (this.filterDate || (this.filterType && this.filterType !== 'all')) {
+                        container.innerHTML = `<div class="text-center text-slate-400 py-8 text-xs">Nessuna misurazione trovata con questi filtri.</div>`;
+                        document.getElementById('logs-empty-state').classList.add('hidden'); 
+                    } else {
+                        document.getElementById('logs-empty-state').classList.remove('hidden');
+                    }
                 } else {
                     document.getElementById('logs-empty-state').classList.add('hidden');
                     
@@ -1048,13 +1118,17 @@
                     ];
 
                     categories.forEach(cat => {
-                        const catLogs = profile.logs.filter(l => l.type === cat.id);
-                        if (catLogs.length === 0 && !this.openCategories[cat.id]) return; // Opzionale: nascondi categorie vuote se chiuse? Meglio mostrare se vuote o no? Mostriamo solo se ci sono dati o se aperta. Ma per coerenza mostriamo tutto se ha dati. Se non ha dati nascondiamo per pulizia.
+                        // Se stiamo filtrando per tipo, saltiamo le categorie che non matchano
+                        if (this.filterType !== 'all' && this.filterType !== cat.id) return;
+
+                        const catLogs = displayLogs.filter(l => l.type === cat.id);
                         
-                        // Se non ci sono log, non mostrare la categoria (per pulizia), a meno che non vogliamo mostrare "0 misurazioni"
+                        // Mostra solo se ci sono log filtrati
                         if (catLogs.length === 0) return;
 
-                        const isOpen = this.openCategories[cat.id];
+                        // Se c'è un filtro attivo (tipo o data), forziamo l'apertura per mostrare i risultati
+                        const isFilterActive = this.filterDate || (this.filterType && this.filterType !== 'all');
+                        const isOpen = isFilterActive ? true : this.openCategories[cat.id];
                         
                         // Creazione Wrapper Accordion
                         const wrapper = document.createElement('div');
@@ -1084,8 +1158,8 @@
                             // Renderizza i log di questa categoria
                             let currentDay = null;
                             catLogs.forEach(log => {
-                                // Day Header Logic (solo se cambia giorno)
-                                if (log.date !== currentDay) {
+                                // Day Header Logic (solo se cambia giorno E se non stiamo già filtrando per data specifica)
+                                if (log.date !== currentDay && !this.filterDate) {
                                     currentDay = log.date;
                                     const dObj = new Date(currentDay);
                                     const dateStr = dObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'long' });
@@ -1095,7 +1169,6 @@
                                     contentDiv.appendChild(dayHeader);
                                 }
                                 
-                                // Render Card (Logica riutilizzata ma semplificata per il contesto)
                                 const el = this.createLogCardElement(log);
                                 contentDiv.appendChild(el);
                             });
